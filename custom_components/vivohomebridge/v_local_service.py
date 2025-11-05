@@ -88,6 +88,9 @@ class VLocalService:
     def config_dn(self, dn: str) -> None:
         self._txt_dn = dn
 
+    def config_ver(self, ver: str) -> None:
+        self._txt_ver = ver
+
     async def sync_update_txt(self) -> None:
         if not self.isRunning or not self._service:
             VLog.warning(_TAG, "Service not running; call sync_start() first.")

@@ -105,13 +105,13 @@ def build_library_filename(base: str, os_name: str, arch: str, libc: Optional[st
     elif os_name == "linux":
         if arch == "aarch64":
             # libvhome_linux_aarch64_1.0.0.so
-            return f"{base}_linux_aarch64_{libVersion}.so"
+            return f"{base}_linux_musl_aarch64_{libVersion}.so"
         elif arch == "armv7":
             # libvhome_linux_arm7_1.0.0.so
-            return f"{base}_linux_armv7_{libVersion}.so"
+            return f"{base}_linux_musl_armv7_{libVersion}.so"
         elif arch == "armv6":
             # libvhome_linux_arm6_1.0.0.so
-            return f"{base}_linux_armv6_{libVersion}.so"
+            return f"{base}_linux_musl_armv6_{libVersion}.so"
         else:
             libc_tag = libc if libc in ("glibc", "musl") else "unknown"
             #libvhome_linux_glibc_x86_64_1.0.0.so libvhome_linux_musl_x86_64_1.0.0.so
@@ -123,7 +123,10 @@ def lib_name(base_name: str, libVersion: str)-> str:
     os_name, arch, libc = detect_platform()
     return build_library_filename(base_name, os_name, arch, libc, libVersion)
 
-libpath = os.path.dirname(os.path.abspath(__file__)) + "/" + lib_name("libvhome", "1.0.0")
+
+libpath = (
+    os.path.dirname(os.path.abspath(__file__)) + "/" + lib_name("libvhome", "1.1.0")
+)
 
 try:
     vhome_lib = ctypes.CDLL(libpath)

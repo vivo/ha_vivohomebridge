@@ -26,6 +26,7 @@ from homeassistant.components.climate import (
     ATTR_TARGET_TEMP_STEP, ATTR_FAN_MODES, ATTR_MIN_HUMIDITY, ATTR_MAX_HUMIDITY, ATTR_SWING_MODE, ATTR_HVAC_MODE,
     ATTR_HVAC_MODES, ATTR_HVAC_ACTION, ATTR_FAN_MODE, ATTR_SWING_MODES, SWING_BOTH, SWING_OFF
 )
+from .utils import Utils
 from .v_utils.vattributes_utils import VAttributeUtils
 from .v_utils.vlog import VLog
 
@@ -140,11 +141,27 @@ class VClimateModel:
         return service, h_attributes
 
     def h2v_target_temperature(self, device_id: str, index: int, on_off: dict, val):
-        VLog.info(_TAG, f"[h2v_target_temperature],val:{val}")
+        unit = Utils.get_entity_unit(self.hass, device_id)
+        VLog.info(_TAG, f"[h2v_target_temperature] {device_id}  unit={unit} val:{val}")
+        if unit == "°F":
+            val = int(round((val - 32) * 5 / 9))
+            VLog.info(_TAG, f"temperature unit is {unit} need to cover {val} °C")
+        if unit == "K":
+            val = int(round(val - 273.15))
+            VLog.info(_TAG, f"temperature unit is {unit} need to cover {val} °C")
         return val
 
     def v2h_target_temperature(self, device_id: str, index: int, on_off: dict, val):
-        VLog.info(_TAG, f"[v2h_target_temperature],val:{val}")
+        unit = Utils.get_entity_unit(self.hass, device_id)
+        VLog.info(_TAG, f"[v2h_target_temperature] {device_id}  unit={unit} val:{val}")
+        if unit == "°F":
+            val = float(val)
+            val = int(round((val * 9 / 5) + 32))
+            VLog.info(_TAG, f"temperature unit is {unit} need to cover {val} °F")
+        if unit == "K":
+            val = float(val)
+            val = int(round(val + 273.15))
+            VLog.info(_TAG, f"temperature unit is {unit} need to cover {val} K")
         service: str = SERVICE_SET_TEMPERATURE
         h_attributes: dict = {ATTR_ENTITY_ID: device_id, "temperature": val}
         return service, h_attributes
@@ -226,8 +243,17 @@ class VClimateModel:
         return service, h_attributes
 
     def h2v_current_temperature(self, device_id: str, index: int, on_off: dict, val):
-        VLog.info(_TAG, f"[h2v_current_temperature] val:{val}")
         try:
+            unit = Utils.get_entity_unit(self.hass, device_id)
+            VLog.info(
+                _TAG, f"[h2v_current_temperature] {device_id}  unit={unit} val:{val}"
+            )
+            if unit == "°F":
+                VLog.info(_TAG, f"temperature unit is {unit} need to cover °C")
+                return int(round((val - 32) * 5 / 9))
+            if unit == "K":
+                VLog.info(_TAG, f"temperature unit is {unit} need to cover °C")
+                return int(round(val - 273.15))
             return int(round(float(val)))
         except ValueError as e:
             VLog.info(_TAG, f"[h2v_current_temperature] val format error:{val} {e}")
@@ -242,7 +268,7 @@ class VClimateModel:
             return None
 
     @classmethod
-    def model_get(cls, entity_id: str, entity_attributes: Mapping[str, Any]) -> list:
+    def model_get(cls, hass: HomeAssistant,entity_id: str, entity_attributes: Mapping[str, Any]) -> list:
         model: list = []
         supported_features = entity_attributes.get(ATTR_SUPPORTED_FEATURES, 0)
         VLog.info(_TAG,
@@ -257,10 +283,26 @@ class VClimateModel:
             VLog.info(_TAG, f"[model_get] {entity_id} support {h_key}")
             _target_temperature_model = VAttributeUtils.get_model_item(Platform.CLIMATE, h_key)
             if _target_temperature_model is not None:
+                unit = Utils.get_entity_unit(hass, entity_id)
                 _min_temp = entity_attributes.get(ATTR_MIN_TEMP, CLIMATE_MIN_TEMP)
                 _max_temp = entity_attributes.get(ATTR_MAX_TEMP, CLIMATE_MAX_TEMP)
-                _climate_step = entity_attributes.get(ATTR_TARGET_TEMP_STEP, CLIMATE_TEMP_STEP)
-                _target_temperature_model["value_range"] = [_min_temp, _max_temp, _climate_step]
+                if unit == "°F":
+                    VLog.info(_TAG, f"temperature unit is {unit} need to cover °C")
+                    _min_temp = int(round((_min_temp - 32) * 5 / 9))
+                    _max_temp = int(round((_max_temp - 32) * 5 / 9))
+                if unit == "K":
+                    VLog.info(_TAG, f"temperature unit is {unit} need to cover °C")
+                    _min_temp =  int(round(_min_temp - 273.15))
+                    _max_temp =  int(round(_max_temp - 273.15))
+
+                _climate_step = entity_attributes.get(
+                    ATTR_TARGET_TEMP_STEP, CLIMATE_TEMP_STEP
+                )
+                _target_temperature_model["value_range"] = [
+                    _min_temp,
+                    _max_temp,
+                    _climate_step,
+                ]
                 if _climate_step is not None:
                     model.append(_target_temperature_model)
         if (ClimateEntityFeature.TARGET_HUMIDITY & ClimateEntityFeature(supported_features)) != 0:

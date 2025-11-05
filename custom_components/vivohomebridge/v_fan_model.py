@@ -114,7 +114,7 @@ class VFanModel:
         return service, h_attributes
 
     @classmethod
-    def model_get(cls, entity_id: str, entity_attributes: Mapping[str, Any]) -> list:
+    def model_get(cls,hass: HomeAssistant, entity_id: str, entity_attributes: Mapping[str, Any]) -> list:
         model: list = []
         supported_features = entity_attributes.get(ATTR_SUPPORTED_FEATURES, 0)
         VLog.info(_TAG, f"[model_get] FanEntityFeature(self.supported_features)={FanEntityFeature(supported_features)}"

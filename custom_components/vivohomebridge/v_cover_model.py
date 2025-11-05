@@ -84,7 +84,7 @@ class VCoverModel:
         return service, h_attributes
 
     @classmethod
-    def model_get(cls, entity_id: str, entity_attributes: Mapping[str, Any]) -> list:
+    def model_get(cls, hass: HomeAssistant, entity_id: str, entity_attributes: Mapping[str, Any]) -> list:
         supported_features = entity_attributes.get(ATTR_SUPPORTED_FEATURES, 0)
         VLog.info(_TAG, f"[model_get]FanEntityFeature(self.supported_features)={CoverEntityFeature(supported_features)}"
                   f"\n entity_attributes = {entity_attributes}")
