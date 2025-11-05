@@ -71,7 +71,7 @@ class VHomeBridgeConfigFlow(ConfigFlow, domain=DOMAIN):
         description_placeholders: {} = {}
         if user_input is not None:
             if user_input.get("important_notes", None) is True:
-                self._bridge_mac = await async_get(self.hass)
+                self._bridge_mac = f"{await async_get(self.hass)}{int(time.time())}"
                 VLog.info(
                     _TAG, "[async_step_user]bridge mac: {}".format(self._bridge_mac)
                 )
