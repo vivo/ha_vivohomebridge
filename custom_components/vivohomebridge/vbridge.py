@@ -21,6 +21,7 @@ from homeassistant.const import (
     ATTR_FRIENDLY_NAME,
     ATTR_NAME,
     ATTR_DEVICE_CLASS,
+    ATTR_TEMPERATURE,
     CONF_UNIT_OF_MEASUREMENT,
     STATE_UNAVAILABLE,
 )
@@ -243,9 +244,10 @@ class VBridgeEntity:
             attributes_map = self.sensor_model.attributes_map
             device_class = state.attributes.get(ATTR_DEVICE_CLASS)
             unit = new_attrs.get(CONF_UNIT_OF_MEASUREMENT)
-            current_attrs[device_class] = VSensorModel.sensor_h2v_val(
-                device_class, unit, new_state.state
-            )
+            if device_class == SensorDeviceClass.TEMPERATURE:
+                current_attrs[ATTR_TEMPERATURE] = VSensorModel.sensor_h2v_val(
+                    device_class, unit, new_state.state
+                )
         else:
             VLog.warning(_TAG, f"{entity_id} Unsupported platform:{platform}")
             return
@@ -582,9 +584,10 @@ class VBridgeEntity:
                 attributes_map = self.sensor_model.attributes_map
                 device_class = attributes.get(ATTR_DEVICE_CLASS)
                 unit = attributes.get(CONF_UNIT_OF_MEASUREMENT)
-                attributes[device_class] = self.sensor_model.sensor_h2v_val(
-                    device_class, unit, device_state.state
-                )
+                if device_class == SensorDeviceClass.TEMPERATURE:
+                    attributes[ATTR_TEMPERATURE] = self.sensor_model.sensor_h2v_val(
+                        device_class, unit, device_state.state
+                    )
                 attributes["state"] = device_state.state
             elif device_platform == Platform.WATER_HEATER:
                 attributes_map = self.water_heater_model.attributes_map

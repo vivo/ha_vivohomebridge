@@ -106,8 +106,12 @@ class VLightModel:
         return round((val * 100) / 255)
 
     @classmethod
-    def model_get(cls, entity_id: str, entity_attributes: Mapping[str, Any]) -> list:
-        VLog.info(_TAG, f"[model_get]{entity_id},entity_attributes = {entity_attributes}")
+    def model_get(
+        cls, hass: HomeAssistant, entity_id: str, entity_attributes: Mapping[str, Any]
+    ) -> list:
+        VLog.info(
+            _TAG, f"[model_get]{entity_id},entity_attributes = {entity_attributes}"
+        )
         model: list = []
         _power_model = VAttributeUtils.get_model_item(Platform.LIGHT, "power")
         if _power_model is not None:

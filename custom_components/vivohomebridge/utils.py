@@ -4,6 +4,8 @@
 
     http://www.apache.org/licenses/LICENSE-2.0
 """
+
+from homeassistant.const import CONF_UNIT_OF_MEASUREMENT
 from homeassistant.helpers import entity_registry as er
 from .const import VIVO_HA_KEY_WORLD_DEV_LOGIC_MAC, VIVO_DEVICE_NAME_CONFIG_KEY, \
     VIVO_DEVICE_ENTITY_ID_KEY, VIVO_HA_KEY_WORLD_DEV_ENTRY_ID, VIVO_DEVICE_NAME_FRIENDLY_KEY,VIVO_DEVICE_ID_KEY
@@ -83,6 +85,15 @@ class Utils:
         return entity_entry.device_id
 
     @staticmethod
+    def get_entity_unit(hass, entity_id):
+        state = hass.states.get(entity_id)
+        if state:
+            unit = state.attributes.get(CONF_UNIT_OF_MEASUREMENT)
+            if unit is None:
+                sys_temperature_unit = hass.config.units.temperature_unit
+                return sys_temperature_unit
+            return unit
+        return None
     def get_device_id(entity_id: str, bridge_config_data: list):
         obj = next((item for item in bridge_config_data if item.get(VIVO_DEVICE_ENTITY_ID_KEY, None) == entity_id), None)
         if obj:
