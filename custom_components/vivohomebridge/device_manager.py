@@ -11,6 +11,7 @@ from typing import Any, Optional, Callable, Dict
 import asyncio
 import time
 from enum import Enum
+from homeassistant.loader import async_get_integration
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import (
     ATTR_FRIENDLY_NAME,
@@ -130,6 +131,7 @@ class DeviceManager:
     _cancel_listen_device_registry_updated_dict: Dict[str, Optional[Callable[[], None]]]
     _cancel_listen_delete_device: Optional[CALLBACK_TYPE]
     __BRIDGE_DEVICE_REMOVED_CODE = 5
+    integration_version: str = "0.0.0.0"
 
     def __new__(cls, *args, **kwargs):
         if not cls._instance:
@@ -144,6 +146,7 @@ class DeviceManager:
             self._on_vhome_data_received_callback,
             self._on_vhome_local_event_callback,
         )
+        self.integration_version = "0.0.0.0"
         self._config_state = self.VConfig_STATE.STATE_INIT
         self._local_server = None
         self._reconnector = ReconnectManager(self._vhome)
@@ -188,7 +191,7 @@ class DeviceManager:
         if self.get_bridge_mac() is None:
             raise ValueError("The 'mac' parameter cannot be None.")
         self._local_server = VLocalService(
-            hass, GLOB_NAME, VIVO_HA_BRIDGE_VERSION, self.get_bridge_mac()
+            hass, GLOB_NAME, self.integration_version, self.get_bridge_mac()
         )
 
     async def async_load_config(self):
@@ -244,11 +247,14 @@ class DeviceManager:
         self, hass: HomeAssistant, isNeed_to_update_mdns: bool = False
     ):
         await self.async_load_config()
+        integration = await async_get_integration(hass, DOMAIN)
+        self.integration_version = integration.manifest["version"]
         bridge_device = self.get_bridge_device()
         VLog.debug(_TAG, f"async_dm_service_start bridge_device={bridge_device}")
         self.get_local_server().config_flag(0)
         await self.get_vhome().network_shakehand_task_stop()
         self.get_local_server().config_dn(None)
+        self.get_local_server().config_ver(self.integration_version)
         if bridge_device.name is not None and len(bridge_device.name) > 0:
             VLog.info(_TAG, f"[setup task] init bridge {bridge_device}")
             entity_id = self._bridge_entity.config_entry.entry_id
@@ -480,7 +486,7 @@ class DeviceManager:
         dev_reg = dr.async_get(hass)
         connection = (dr.CONNECTION_NETWORK_MAC, mac)
         identifier = (DOMAIN, config_entry_id, device_name)
-        version = self._vhome.version()
+        lib_version = self._vhome.version()
         build_time = self._vhome.build_time()
         try:
             self.get_bridge_entity().bridge_service = dev_reg.async_get_or_create(
@@ -491,7 +497,7 @@ class DeviceManager:
                 name=device_name,
                 model="",
                 entry_type=dr.DeviceEntryType.SERVICE,
-                sw_version=f"{VIVO_HA_BRIDGE_VERSION}-{version}-{build_time}",
+                sw_version=f"{self.integration_version}-{lib_version}-{build_time}",
             )
             VLog.info(
                 _TAG,
@@ -1787,7 +1793,7 @@ class DeviceManager:
             {
                 VIVO_HA_COMMON_ATTR_MODEL: GLOB_NAME,
                 VIVO_ATTR_NAME_ONLINE: "true",
-                VIVO_HA_COMMOM_ATTR_SOFTVER: VIVO_HA_BRIDGE_VERSION,
+                VIVO_HA_COMMOM_ATTR_SOFTVER: self.integration_version,
                 VIVO_HA_COMMOM_ATTR_HARDVER: __version__,
                 VIVO_HA_COMMOM_ATTR_VENDOR: Utils.get_cpuinfo_model(),
                 VIVO_HA_COMMON_ATTR_SERIAL: self.get_bridge_mac()
