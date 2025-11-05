@@ -76,11 +76,11 @@ class VModel:
             self.logicMac: str = f"{self.entity_obj.id}.{self.platform}"
         if self.platform == Platform.LIGHT:
             self.entity_model = VLightModel.model_get(
-                self.entity_id, self.entity_attributes
+                self.hass, self.entity_id, self.entity_attributes
             )
         elif self.platform == Platform.SWITCH:
             self.entity_model = VSwitchModel.model_get(
-                self.entity_id, self.entity_attributes
+                self.hass, self.entity_id, self.entity_attributes
             )
             VLog.info(
                 _TAG,
@@ -91,29 +91,30 @@ class VModel:
                 pky = VIVO_HA_PLATFORM_SOCKET_PK
             else:
                 pky = VIVO_HA_PLATFORM_SWITCH_PK
+
         elif self.platform == Platform.CLIMATE:
             self.entity_model = VClimateModel.model_get(
-                self.entity_id, self.entity_attributes
+                self.hass, self.entity_id, self.entity_attributes
             )
         elif self.platform == Platform.FAN:
             self.entity_model = VFanModel.model_get(
-                self.entity_id, self.entity_attributes
+                self.hass, self.entity_id, self.entity_attributes
             )
         elif self.platform == Platform.COVER:
             self.entity_model = VCoverModel.model_get(
-                self.entity_id, self.entity_attributes
+                self.hass, self.entity_id, self.entity_attributes
             )
         elif self.platform == Platform.REMOTE:
             self.entity_model = VTVModelUtils.remote_model_get(
-                self.device, self.entity_attributes
+                self.hass, self.device, self.entity_attributes
             )
         elif self.platform == Platform.MEDIA_PLAYER:
             self.entity_model = VTVModelUtils.media_play_model_get(
-                self.device, self.entity_attributes
+                self.hass, self.device, self.entity_attributes
             )
         elif self.platform in {Platform.SENSOR, Platform.BINARY_SENSOR}:
             self.entity_model = VSensorModel.model_get(
-                self.entity_id, self.entity_attributes
+                self.hass, self.entity_id, self.entity_attributes
             )
             pky = VIVO_HA_SENSORS_PK.get(self.entity_attributes.get(ATTR_DEVICE_CLASS))
         else:
@@ -144,7 +145,10 @@ class VModel:
         self.model[VIVO_HA_KEY_WORLD_DEV_PHY_MAC] = self.phyMac
         self.model[VIVO_HA_KEY_WORLD_DEV_PROPS] = self.common_model + self.entity_model
 
-        VLog.info(
-            _TAG, f"[init]entity_attributes json :{json.dumps(self.entity_attributes)}"
-        )
+        try:
+            json_str = json.dumps(self.entity_attributes, default=str)
+        except Exception as e:
+            json_str = f"<json error: {e}>"
+
+        VLog.info(_TAG, f"[init]entity_attributes json :{json_str}")
         VLog.info(_TAG, f"[init]{entity_id} whole_model:{json.dumps(self.model)}")

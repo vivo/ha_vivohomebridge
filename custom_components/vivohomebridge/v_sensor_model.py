@@ -153,7 +153,7 @@ class VSensorModel:
             return val
 
     @classmethod
-    def model_get(cls, entity_id, entity_attributes):
+    def model_get(cls, hass: HomeAssistant, entity_id, entity_attributes):
         VLog.info(_TAG, f"[model_get]sensor_model_get:{entity_attributes.get(ATTR_DEVICE_CLASS)}")
         model: list = []
         device_class = entity_attributes.get(ATTR_DEVICE_CLASS)
