@@ -315,12 +315,18 @@ class VHome:
         self, bcode: str, dn: str, mac: str, sub_devices: list[dict]
     ) -> dict:
         result_dict = {}
-        result = vhome_lib.vhome_sub_devices_register(
-            bcode.encode("utf-8"),
-            dn.encode("utf-8"),
-            mac.encode("utf-8"),
-            json.dumps(sub_devices).encode("utf-8"),
-        )
+        try:
+            json_sub_devices = json.dumps(sub_devices)
+            result = vhome_lib.vhome_sub_devices_register(
+                bcode.encode("utf-8"),
+                dn.encode("utf-8"),
+                mac.encode("utf-8"),
+                json_sub_devices.encode("utf-8"),
+            )
+        except Exception as e:
+            _LOGGER.warning( f"json_sub_devices fail <{e}>")
+            return result_dict
+            
         if result:
             result_str = ctypes.cast(result, c_char_p).value.decode("utf-8")
             _LOGGER.info(f"子设备注册结果 : {result_str}")
@@ -357,9 +363,15 @@ class VHome:
 
     def _send_bind_code_to_app(self, bindCode: dict) -> int:
         _LOGGER.debug(f"_send_bind_code_to_app:{bindCode}")
-        return vhome_lib.vhome_send_bind_code_to_app(
-            json.dumps(bindCode).encode("utf-8")
+        try:
+            json_bindCode = json.dumps(bindCode)
+            return vhome_lib.vhome_send_bind_code_to_app(
+            json_bindCode.encode("utf-8")
         )
+        except Exception as e:
+            _LOGGER.warning( f"<json error: {e}>") 
+            return -1
+
 
     async def async_get_bcode(self, mac: str) -> dict:
         """获取绑定码

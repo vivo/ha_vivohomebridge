@@ -529,10 +529,16 @@ class VLGTV(VTVCommon):
 
     @classmethod
     def media_player_model_get(cls, device: dr.DeviceEntry, attributes: Mapping[str, Any]):
-        VLog.info(_TAG, f"[lg_media_player_model_get] {device}\n json of attribute is {json.dumps(attributes)}")
+        try:
+            VLog.info(_TAG, f"[lg_media_player_model_get] {device}\n json of attribute is {json.dumps(attributes,default=str)}")
+        except Exception as e:
+            VLog.warning(_TAG, f"<json error: {e}>")
         model: list = []
         _tv_common_model = cls.get_media_player_model_from_feature(device, attributes)
-        VLog.info(_TAG, f"[lg_media_player_model_get] _tv_common_model {json.dumps(_tv_common_model)}", )
+        try:
+            VLog.info(_TAG, f"[lg_media_player_model_get] _tv_common_model {json.dumps(_tv_common_model,default=str)}", )
+        except Exception as e:
+            VLog.warning(_TAG, f"<json error: {e}>")
         model += _tv_common_model
         lg_keys_out_of_feature = ["left", "right", "down", "up", "home", "menu", "back", "enter",
                                   HA_LG_ATTR_NAME_VOLUME_UP, HA_LG_ATTR_NAME_VOLUME_DOWN,
@@ -541,7 +547,10 @@ class VLGTV(VTVCommon):
             _item = VAttributeUtils.get_model_item(Platform.MEDIA_PLAYER, h_key)
             if _item is not None:
                 model.append(_item)
-        VLog.info(_TAG, f"[lg_media_player_model_get] models {json.dumps(model)}", )
+        try:
+            VLog.info(_TAG, f"[lg_media_player_model_get] models {json.dumps(model,default=str)}", )
+        except Exception as e:
+            VLog.warning(_TAG, f"<json error: {e}>")
         return model
 
     @staticmethod
@@ -996,7 +1005,10 @@ class VAppleTV(VTVCommon):
             _item = VAttributeUtils.get_model_item(Platform.REMOTE, h_ext_key)
             if _item is not None:
                 model.append(_item)
-        VLog.info(_TAG, f"[remote_model_get] {json.dumps(model)}")
+        try:
+            VLog.info(_TAG, f"[remote_model_get] {json.dumps(model,default=str)}")
+        except Exception as e:
+            VLog.warning(_TAG, f"<json error: {e}>")
         return model
 
     @staticmethod

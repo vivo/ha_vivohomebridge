@@ -131,12 +131,16 @@ class VBridgeEntity:
             new_state.state != "off" and new_state != STATE_UNAVAILABLE
         ):
             current_attrs_from_change = False
-        VLog.info(
-            _TAG,
-            f"[entity_state_change] {entity_id} from change:{current_attrs_from_change} "
-            f"change as follow:\n\t\r old_state:{old_state}\n\n\t\r new_state:{new_state}\n\n"
-            f"\t\r old_attrs:{json.dumps(old_attrs)}\n\n\t\r new_attrs:{json.dumps(new_attrs)}\n\n",
-        )
+        try:
+            VLog.info(
+                _TAG,
+                f"[entity_state_change] {entity_id} from change:{current_attrs_from_change} "
+                f"change as follow:\n\t\r old_state:{old_state}\n\n\t\r new_state:{new_state}\n\n"
+                f"\t\r old_attrs:{json.dumps(old_attrs,default=str)}\n\n\t\r new_attrs:{json.dumps(new_attrs,default=str)}\n\n",
+            )
+        except Exception as e:
+            VLog.warning(_TAG, f"<json error: {e}>")
+            
         if current_attrs_from_change is False:
             for attr_name, new_value in new_attrs.items():
                 current_attrs[attr_name] = new_value
@@ -182,11 +186,14 @@ class VBridgeEntity:
             ):
                 attributes_map = self.switch_model.attributes_map
             else:
-                VLog.info(
-                    _TAG,
-                    f"[entity_state_change] {entity_id} "
-                    f"Unsupported the attrs:{json.dumps(changed_attrs)}",
-                )
+                try:
+                    VLog.info(
+                        _TAG,
+                        f"[entity_state_change] {entity_id} "
+                        f"Unsupported the attrs:{json.dumps(changed_attrs,default=str)}",
+                    )
+                except Exception as e:
+                    VLog.warning(_TAG, f"<json error: {e}>")
                 return
             if new_state.state != old_state.state:
                 current_attrs["power"] = new_state.state
@@ -595,9 +602,12 @@ class VBridgeEntity:
             else:
                 VLog.info(_TAG, f"[flush] not support :{device_platform}")
                 return
-            VLog.info(
-                _TAG, "[flush] Attribute before transform：" + json.dumps(attributes)
-            )
+            try:
+                VLog.info(
+                    _TAG, "[flush] Attribute before transform: " + json.dumps(attributes,default=str)
+                )
+            except Exception as e:
+                VLog.warning(_TAG, f"<json error: {e}>")
             vivo_std_attrs = {}
             try:
                 vivo_std_attrs = VAttributeUtils.h2v_attributes_converter(
@@ -621,9 +631,12 @@ class VBridgeEntity:
                 vivo_std_attrs = {VIVO_ATTR_NAME_ONLINE: "false"}
             else:
                 vivo_std_attrs[VIVO_ATTR_NAME_ONLINE] = "true"
-            VLog.info(
-                _TAG, "[flush] Attribute after transform：" + json.dumps(vivo_std_attrs)
-            )
+            try:
+                VLog.info(
+                    _TAG, "[flush] Attribute after transform: " + json.dumps(vivo_std_attrs,default=str)
+                )
+            except Exception as e:
+                VLog.warning(_TAG, f"<json error: {e}>")
             self.hass.bus.fire(
                 EVENT_VHOME_DEV_STATE_CHANGE,
                 {

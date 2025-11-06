@@ -209,12 +209,7 @@ class DeviceManager:
         except (ValueError, HomeAssistantError):
             await self._bridge_entity.bridge_config_handle.async_remove()
             self._bridge_entity.bridge_config_data = []
-        if self._bridge_entity.bridge_config_data:
-            VLog.info(
-                _TAG,
-                f"[async_load_config]"
-                f" bridge_config_data:{json.dumps(self._bridge_entity.bridge_config_data)}",
-            )
+
         for item in self._bridge_entity.bridge_config_data:
             entity_id_from_config = item.get(VIVO_DEVICE_ENTITY_ID_KEY)
             if entity_id_from_config:
@@ -811,9 +806,13 @@ class DeviceManager:
                     f"[async_sync_sub_devices] vModel instantiation failed,ignore sync device {e}",
                 )
                 return
-        VLog.info(
-            _TAG, f"[async_sync_sub_devices] sub_devices:{json.dumps(sub_devices)}"
-        )
+        try:
+            VLog.info(
+                _TAG, f"[async_sync_sub_devices] sub_devices:{json.dumps(sub_devices,default=str)}"
+            )
+        except Exception as e:
+            VLog.warning(_TAG, f"<json error: {e}>")
+            
         if len(sub_devices) >= 0:
             user_code = config_entry.data.get(VIVO_BRIDGE_USER_CODE_CONFIG_KEY, None)
             device_name = config_entry.data.get(
@@ -830,10 +829,14 @@ class DeviceManager:
         bridge state changed callback
         {"state": 0, "payload": {"connect_result": 0}}
         """
-        VLog.info(
-            _TAG,
-            f"[state changed] {json.dumps(data)},the bridge enable is {self._integration_enable}",
-        )
+        try:
+            VLog.info(
+                _TAG,
+                f"[state changed] {json.dumps(data,default=str)},the bridge enable is {self._integration_enable}",
+            )
+        except Exception as e:
+            VLog.warning(_TAG, f"<json error: {e}>")
+            
         if data is None:
             return
         if self._bridge_entity is None:
@@ -883,10 +886,17 @@ class DeviceManager:
                         f"[state changed] bridge is disable,not post reconnect event",
                     )
         else:
-            VLog.info(_TAG, f"[state changed]：unknown state:{json.dumps(data)}")
+            try:
+                VLog.info(_TAG, f"[state changed]: unknown state:{json.dumps(data,default=str)}")
+            except Exception as e:
+                VLog.warning(_TAG, f"<json error: {e}>")
 
     def _on_vhome_data_received_callback(self, data: dict) -> None:
-        VLog.info(_TAG, f"[data received]：{json.dumps(data)}")
+        try:
+            VLog.info(_TAG, f"[data received]: {json.dumps(data,default=str)}")
+        except Exception as e:
+            VLog.warning(_TAG, f"<json error: {e}>")
+            
         if data is None or not isinstance(data, dict) or "payload" not in data:
             return
         if self._bridge_entity is None:
@@ -1250,16 +1260,22 @@ class DeviceManager:
                     config_device_item[ATTR_ENTITY_ID]
                     for config_device_item in config_devices
                 ]
+                try:
+                    VLog.debug(
+                        _TAG,
+                        "[set_status]:default_selected_entity_id_list={}".format(
+                            json.dumps(default_selected_entity_id_list,default=str)
+                        ),
+                    )
+                except Exception as e:
+                    VLog.warning(_TAG, f"<json error: {e}>")
+            try:        
                 VLog.debug(
                     _TAG,
-                    "[set_status]:default_selected_entity_id_list={}".format(
-                        json.dumps(default_selected_entity_id_list)
-                    ),
+                    "[set_status]:user add entity_ids={}".format(json.dumps(entity_ids,default=str)),
                 )
-            VLog.debug(
-                _TAG,
-                "[set_status]:user add entity_ids={}".format(json.dumps(entity_ids)),
-            )
+            except Exception as e:
+                VLog.warning(_TAG, f"<json error: {e}>")
             await self.on_async_ui_select_device(
                 entity_ids + default_selected_entity_id_list
             )
@@ -1850,7 +1866,10 @@ class DeviceManager:
         entry_data[VIVO_HA_CONFIG_DATA_DEVICES_KEY] = (
             self._bridge_entity.bridge_config_data
         )
-        VLog.info(_TAG, f"[set_config_devices][{reason}] " + json.dumps(entry_data))
+        try:
+            VLog.info(_TAG, f"[set_config_devices][{reason}] " + json.dumps(entry_data,default=str))
+        except Exception as e:
+            VLog.warning(_TAG, f"<json error: {e}>")
         devices = entry_data[VIVO_HA_CONFIG_DATA_DEVICES_KEY]
         if devices is not None:
             dev_reg = dr.async_get(self._bridge_entity.hass)
