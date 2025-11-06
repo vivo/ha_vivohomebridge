@@ -151,4 +151,4 @@ class VModel:
             json_str = f"<json error: {e}>"
 
         VLog.info(_TAG, f"[init]entity_attributes json :{json_str}")
-        VLog.info(_TAG, f"[init]{entity_id} whole_model:{json.dumps(self.model)}")
+        VLog.info(_TAG, f"[init]{entity_id} whole_model:{json.dumps(self.model,default=str)}")
