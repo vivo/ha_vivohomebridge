@@ -9,6 +9,7 @@
 VIVO_KEY_WORD_H_NAME = "h_name"
 VIVO_KEY_WORD_V_NAME = "v_name"
 VIVO_KEY_WORD_NAME = "name"
+VIVI_KEY_WORK_SENSOR_CLASS = "h_sensor_class"
 VIVO_HA_COMMOM_ATTR_SOFTVER = "vivo_std_softver"
 VIVO_HA_COMMOM_ATTR_HARDVER = "vivo_std_hardver"
 VIVO_HA_COMMOM_ATTR_VENDOR = "vivo_std_vendor"
