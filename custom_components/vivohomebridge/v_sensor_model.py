@@ -11,7 +11,7 @@ from homeassistant.const import ATTR_DEVICE_CLASS, Platform
 from homeassistant.core import HomeAssistant
 from .const import VIVO_HA_PLATFORM_COMMON_SENSOR_PK, VIVO_HA_PLATFORM_HUMIDITY_TEMPERATURE_PK, \
     VIVO_HA_PLATFORM_ILLUMINANCE_PK, VIVO_HA_PLATFORM_OCCUPANCY_PK, VIVO_HA_PLATFORM_OPENING_PK
-from .v_attribute import VIVO_KEY_WORD_V_NAME, VIVO_KEY_WORD_H_NAME
+from .v_attribute import VIVO_KEY_WORD_V_NAME, VIVO_KEY_WORD_H_NAME,VIVI_KEY_WORK_SENSOR_CLASS
 from .v_utils.vattributes_utils import VAttributeUtils
 from .v_utils.vlog import VLog
 _TAG = "sensor"
@@ -39,79 +39,91 @@ class VSensorModel:
             # 通用
             {
                 VIVO_KEY_WORD_V_NAME: "vivo_std_sensor_value",
-                VIVO_KEY_WORD_H_NAME: SensorDeviceClass.ENUM,
+                VIVI_KEY_WORK_SENSOR_CLASS: SensorDeviceClass.ENUM,
+                VIVO_KEY_WORD_H_NAME:"state",
                 # "v2h_converter": self.v2h_onoff,
                 "h2v_converter": self.h2v_prop,
             },
             # 人体移动
             {
                 VIVO_KEY_WORD_V_NAME: "vivo_std_person_move",
-                VIVO_KEY_WORD_H_NAME: BinarySensorDeviceClass.OCCUPANCY,
+                VIVI_KEY_WORK_SENSOR_CLASS: BinarySensorDeviceClass.OCCUPANCY,
+                VIVO_KEY_WORD_H_NAME:"state",
                 # "v2h_converter": self.v2h_color_temp,
                 "h2v_converter": self.h2v_person_move,
             },
             {
                 VIVO_KEY_WORD_V_NAME: "vivo_std_person_move",
-                VIVO_KEY_WORD_H_NAME: BinarySensorDeviceClass.MOTION,
+                VIVI_KEY_WORK_SENSOR_CLASS: BinarySensorDeviceClass.MOTION,
+                VIVO_KEY_WORD_H_NAME:"state",
                 # "v2h_converter": self.v2h_color_temp,
                 "h2v_converter": self.h2v_person_move,
             },
             {
                 VIVO_KEY_WORD_V_NAME: "vivo_std_person_move",
-                VIVO_KEY_WORD_H_NAME: BinarySensorDeviceClass.MOVING,
+                VIVI_KEY_WORK_SENSOR_CLASS: BinarySensorDeviceClass.MOVING,
+                VIVO_KEY_WORD_H_NAME:"state",
                 # "v2h_converter": self.v2h_color_temp,
                 "h2v_converter": self.h2v_person_move,
             },
             # 温度
             {
                 VIVO_KEY_WORD_V_NAME: "vivo_std_temperature",
-                VIVO_KEY_WORD_H_NAME: SensorDeviceClass.TEMPERATURE,
+                VIVI_KEY_WORK_SENSOR_CLASS: SensorDeviceClass.TEMPERATURE,
+                VIVO_KEY_WORD_H_NAME:"state",
                 # "v2h_converter": self.v2h_brightness,
                 "h2v_converter": self.h2v_prop,
             },
             # # 湿度
             {
                 VIVO_KEY_WORD_V_NAME: "vivo_std_humidity",
-                VIVO_KEY_WORD_H_NAME: SensorDeviceClass.HUMIDITY,
+                VIVI_KEY_WORK_SENSOR_CLASS: SensorDeviceClass.HUMIDITY,
+                VIVO_KEY_WORD_H_NAME:"state",
                 # "v2h_converter": self.v2h_color_rgb,
                 "h2v_converter": self.h2v_prop,
             },
             # 电量
             {
                 VIVO_KEY_WORD_V_NAME: "vivo_std_battery",
-                VIVO_KEY_WORD_H_NAME: SensorDeviceClass.BATTERY,
+                VIVI_KEY_WORK_SENSOR_CLASS: SensorDeviceClass.BATTERY,
+                VIVO_KEY_WORD_H_NAME:"state",
                 # "v2h_converter": self.v2h_color_temp,
                 "h2v_converter": self.h2v_prop,
             },
             # 光照
             {
                 VIVO_KEY_WORD_V_NAME: "vivo_std_illuminance",
-                VIVO_KEY_WORD_H_NAME: SensorDeviceClass.ILLUMINANCE,
+                VIVI_KEY_WORK_SENSOR_CLASS: SensorDeviceClass.ILLUMINANCE,
+                VIVO_KEY_WORD_H_NAME:"state",
                 # "v2h_converter": self.v2h_color_temp,
                 "h2v_converter": self.h2v_prop,
             },
             {
                 VIVO_KEY_WORD_V_NAME: "vivo_std_illuminance",
-                VIVO_KEY_WORD_H_NAME: BinarySensorDeviceClass.LIGHT,
+                VIVI_KEY_WORK_SENSOR_CLASS: BinarySensorDeviceClass.LIGHT,
+                VIVO_KEY_WORD_H_NAME:"state",
                 # "v2h_converter": self.v2h_color_temp,
                 "h2v_converter": self.h2v_prop,
             },
             # # 门磁
             {
                 VIVO_KEY_WORD_V_NAME: "vivo_std_onoff",
-                VIVO_KEY_WORD_H_NAME: BinarySensorDeviceClass.DOOR,
+                VIVI_KEY_WORK_SENSOR_CLASS: BinarySensorDeviceClass.DOOR,
+                VIVO_KEY_WORD_H_NAME:"state",
                 # "v2h_converter": self.v2h_color_temp,
                 "h2v_converter": self.h2v_door,
             },
             {
                 VIVO_KEY_WORD_V_NAME: "vivo_std_onoff",
-                VIVO_KEY_WORD_H_NAME: BinarySensorDeviceClass.GARAGE_DOOR,
+                VIVI_KEY_WORK_SENSOR_CLASS: BinarySensorDeviceClass.GARAGE_DOOR,
+                VIVO_KEY_WORD_H_NAME:"state",
                 # "v2h_converter": self.v2h_color_temp,
                 "h2v_converter": self.h2v_door,
             },
             {
                 VIVO_KEY_WORD_V_NAME: "vivo_std_onoff",
-                VIVO_KEY_WORD_H_NAME: BinarySensorDeviceClass.OPENING,
+                VIVI_KEY_WORK_SENSOR_CLASS: BinarySensorDeviceClass.OPENING,
+                VIVO_KEY_WORD_H_NAME:"state",
                 # "v2h_converter": self.v2h_color_temp,
                 "h2v_converter": self.h2v_door,
             },
