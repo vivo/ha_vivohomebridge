@@ -55,6 +55,7 @@ from .v_attribute import (
     VIVO_HA_COMMON_ATTR_MODEL,
     HA_ATTR_NAME_POWER,
     VIVO_KEY_WORD_V_NAME,
+    VIVI_KEY_WORK_SENSOR_CLASS,
 )
 
 # new device integration
@@ -132,25 +133,43 @@ class VBridgeEntity:
         ):
             current_attrs_from_change = False
         try:
+            def diff_states(old_state, new_state):
+                """返回只包含变化项的新属性（包括 state 和 attributes）。"""
+                result = {}
+
+                if old_state.state != new_state.state:
+                    result["state"] = new_state.state
+
+                old_attrs = old_state.attributes or {}
+                new_attrs = new_state.attributes or {}
+
+                for key, new_value in new_attrs.items():
+                    if old_attrs.get(key) != new_value:
+                        result[key] = new_value
+
+                # 被删除的属性（旧有新无）
+                for key in old_attrs:
+                    if key not in new_attrs:
+                        result[key] = None
+
+                return result
+
+
             VLog.info(
                 _TAG,
                 f"[entity_state_change] {entity_id} from change:{current_attrs_from_change} "
                 f"change as follow:\n\t\r old_state:{old_state}\n\n\t\r new_state:{new_state}\n\n"
                 f"\t\r old_attrs:{json.dumps(old_attrs,default=str)}\n\n\t\r new_attrs:{json.dumps(new_attrs,default=str)}\n\n",
             )
+            current_attrs  = diff_states(old_state,new_state)
         except Exception as e:
             VLog.warning(_TAG, f"<json error: {e}>")
+            
             
         if current_attrs_from_change is False:
             for attr_name, new_value in new_attrs.items():
                 current_attrs[attr_name] = new_value
         else:
-            for attr_name, new_value in new_attrs.items():
-                if attr_name in old_attrs:
-                    old_value = old_attrs[attr_name]
-                    if new_value != old_value:
-                        current_attrs[attr_name] = new_value
-                        changed_attrs[attr_name] = {"old": old_value, "new": new_value}
             if changed_attrs:
                 VLog.info(
                     _TAG,
@@ -248,8 +267,13 @@ class VBridgeEntity:
                 for attr_name, attr_value in _current_attrs.items():
                     current_attrs[attr_name] = attr_value
         elif platform == Platform.BINARY_SENSOR or platform == Platform.SENSOR:
-            attributes_map = self.sensor_model.attributes_map
+            attributes_maps = self.sensor_model.attributes_map
             device_class = state.attributes.get(ATTR_DEVICE_CLASS)
+            target_map = next( item 
+                                    for item in attributes_maps
+                                    if item[VIVI_KEY_WORK_SENSOR_CLASS] ==device_class 
+                                    )
+            attributes_map.append(target_map)
             unit = new_attrs.get(CONF_UNIT_OF_MEASUREMENT)
             if device_class == SensorDeviceClass.TEMPERATURE:
                 current_attrs[ATTR_TEMPERATURE] = VSensorModel.sensor_h2v_val(
@@ -588,8 +612,13 @@ class VBridgeEntity:
                 device_platform == Platform.SENSOR
                 or device_platform == Platform.BINARY_SENSOR
             ):
-                attributes_map = self.sensor_model.attributes_map
+                attributes_maps = self.sensor_model.attributes_map
                 device_class = attributes.get(ATTR_DEVICE_CLASS)
+                target_map = next( item 
+                                      for item in attributes_maps
+                                      if item[VIVI_KEY_WORK_SENSOR_CLASS] ==device_class 
+                                      )
+                attributes_map.append(target_map)
                 unit = attributes.get(CONF_UNIT_OF_MEASUREMENT)
                 if device_class == SensorDeviceClass.TEMPERATURE:
                     attributes[ATTR_TEMPERATURE] = self.sensor_model.sensor_h2v_val(
