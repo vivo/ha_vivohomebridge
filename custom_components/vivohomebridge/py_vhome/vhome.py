@@ -22,7 +22,16 @@ import logging
 _LOGGER = logging.getLogger("py_vhome")
 system = platform.system()
 machine = platform.machine()
+LIBVERSION = "1.1.1"
+"""
+检测机器架构
 
+Args:
+ machine (str): 机器的架构名称
+
+Returns:
+ str: 规范化的机器架构名称
+"""
 def detect_arch(machine: str) -> str:
     m = machine.lower()
     if m in ("x86_64", "amd64"):
@@ -125,7 +134,7 @@ def lib_name(base_name: str, libVersion: str)-> str:
 
 
 libpath = (
-    os.path.dirname(os.path.abspath(__file__)) + "/" + lib_name("libvhome", "1.1.0")
+    os.path.dirname(os.path.abspath(__file__)) + "/" + lib_name("libvhome", LIBVERSION )
 )
 
 try:
