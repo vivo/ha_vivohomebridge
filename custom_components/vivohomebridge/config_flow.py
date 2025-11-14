@@ -247,10 +247,16 @@ class VHomeBridgeOptionsFlowHandler(OptionsFlow):
         await DeviceManager.instance().instance().get_local_server().sync_stop()
         if self._delay_time % 60 == 0:
             time_out_minutes = self._delay_time / 60
-            time_unit = "分钟"
+            unit_key = "min"
         else:
             time_out_minutes = self._delay_time
-            time_unit = "秒"
+            unit_key = "sec"
+        TIME_UNIT_TRANSLATIONS = {
+            "zh-Hans": {"min": "分钟", "sec": "秒"},
+            "en": {"min": "minute", "sec": "second"},
+        }
+        lang = self.hass.config.language
+        time_unit = TIME_UNIT_TRANSLATIONS.get(lang, TIME_UNIT_TRANSLATIONS["en"])[unit_key]
         return self.async_show_progress(
             step_id="qrcode_show",
             progress_action="wait_for_scanned",
