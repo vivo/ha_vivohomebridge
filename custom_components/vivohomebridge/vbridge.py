@@ -276,7 +276,7 @@ class VBridgeEntity:
             attributes_map.append(target_map)
             unit = new_attrs.get(CONF_UNIT_OF_MEASUREMENT)
             if device_class == SensorDeviceClass.TEMPERATURE:
-                current_attrs[ATTR_TEMPERATURE] = VSensorModel.sensor_h2v_val(
+                current_attrs["state"] = VSensorModel.sensor_h2v_val(
                     device_class, unit, new_state.state
                 )
         else:
@@ -621,10 +621,11 @@ class VBridgeEntity:
                 attributes_map.append(target_map)
                 unit = attributes.get(CONF_UNIT_OF_MEASUREMENT)
                 if device_class == SensorDeviceClass.TEMPERATURE:
-                    attributes[ATTR_TEMPERATURE] = self.sensor_model.sensor_h2v_val(
+                    attributes["state"] = self.sensor_model.sensor_h2v_val(
                         device_class, unit, device_state.state
                     )
-                attributes["state"] = device_state.state
+                else:
+                    attributes["state"] = device_state.state
             elif device_platform == Platform.WATER_HEATER:
                 attributes_map = self.water_heater_model.attributes_map
                 attributes["state"] = device_state.state
