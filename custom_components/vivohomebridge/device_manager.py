@@ -1152,7 +1152,7 @@ class DeviceManager:
             if not entry_id_obtain:
                 return
             VLog.info(
-                _TAG, f"[registry_updated_remove]：remove {entity_id} {entry_id_obtain}"
+                _TAG, f"[registry_updated_remove]: remove {entity_id} {entry_id_obtain}"
             )
             integration_config_entries = (
                 self._bridge_entity.hass.config_entries.async_entries()
@@ -1175,7 +1175,7 @@ class DeviceManager:
                 event_data = {"entity_ids": entity_ids, "action": "remove_entry_3rd"}
                 VLog.info(
                     _TAG,
-                    f"[registry_updated_remove]：remove entry {entry_id_obtain} {entity_ids}",
+                    f"[registry_updated_remove]: remove entry {entry_id_obtain} {entity_ids}",
                 )
             else:
                 entity_ids = [entity_id]
@@ -1184,11 +1184,11 @@ class DeviceManager:
                 reason = "remove_entity_3rd"
                 event_data = {"entity_ids": entity_ids, "action": "remove_entity_3rd"}
                 VLog.info(
-                    _TAG, f"[registry_updated_remove]：remove entity {entity_ids}"
+                    _TAG, f"[registry_updated_remove]: remove entity {entity_ids}"
                 )
             VLog.info(
                 _TAG,
-                f"[registry_updated_remove]：before remove {entity_ids} "
+                f"[registry_updated_remove]: before remove {entity_ids} "
                 f"\n\t {self._bridge_entity.bridge_config_data}",
             )
             self._bridge_entity.bridge_config_data = [

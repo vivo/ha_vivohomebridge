@@ -502,12 +502,11 @@ class VBridgeEntity:
     ) -> str | None:
         hass = self.hass
         _entity_obj = er.async_get(hass).async_get(entity_id)
-        if (
-            _entity_obj is None
-            or _entity_obj.config_entry_id is None
-            or len(_entity_obj.config_entry_id) == 0
-        ):
-            VLog.info(_TAG, f"[generate_device_name] {entity_id} no config entry")
+        if _entity_obj is None:
+            VLog.warning(_TAG,F"entity_id:{entity_id} _entity_obj is None")
+            return None
+        if _entity_obj.device_id is None:
+            VLog.warning(_TAG,f"entity_id:{entity_id} device_id is None")
             return None
         if not _entity_obj.id:
             VLog.info(_TAG, f"[generate_device_name] {entity_id} no id")
