@@ -5,7 +5,7 @@
 **vivohomebridge** is an integration running on **[Home Assistant](https://www.home-assistant.io/)**, with the following main functions:
  - It maps devices (entities) connected to the HA platform into the vivo IoT ecosystem.
  - Enables seamless integration with vivo’s IoT ecosystem, allowing users to manage these devices through vivo’s system capabilities — such as **JoviInLife App**, **Connection Center**, **BlueLM Copilot**, and **Shortcut Commands** — for a unified and smooth vivo IoT experience.
-![alt text](doc/images/image.png)
+![alt text](doc/images/en/image.png)
 ## Integration Advantages
 - **Break the ecosystem barrier:** Seamlessly synchronize devices from the HA platform (regardless of brand) to the vivo JoviInLife app.
 
@@ -18,7 +18,7 @@
 - **Convenient intelligent automation (for vivo phones):** Leverage  vivo JoviInLife automation capabilities to easily build cross-brand, cross-ecosystem smart scenarios and automations.
   
 ## vivo phone unique device control function display
-![vphone](doc/images/vPhone.png)
+![vphone](doc/images/en/vPhone.png)
 
 ## Supported Device Categories
 We continuously expand supported categories. Currently, the following are supported:
@@ -68,7 +68,7 @@ Then copy the `vivohomebridge` folder (located in `ha_vivohomebridge/custom_comp
 ### Installation
 In the `Home Assistant` UI:
 ⚙️ Settings > Devices & Services > Add Integration > 🔍 Search for "vivo" or "vivohomebridge", then follow the prompts to complete installation by clicking Next until Finish, as shown below:
-![install](doc/images/install.png)
+![install](doc/images/en/install.png)
 
 
 ## Integration Usage
@@ -81,23 +81,23 @@ There are two scenarios with slightly different binding methods:
 
 **Note:** This method only supports vivo phones.
 Illustration:
-![vivo_bind](doc/images/vivo_bind.png)
+![vivo_bind](doc/images/en/vivo_bind.png)
 
 ### Case 2: Home Assistant and Phone Not on the Same Network or Using a Non-vivo Phone
 
 **Note:** Supports both vivo and non-vivo phones.
 Illustration:
-![bind](doc/images/bind.png)
+![bind](doc/images/en/bind.png)
 
 ## Adding Devices
 
 ### Prerequisites
 Your Home Assistant must already have devices added, and they should be within the [Supported Device Categories](#supported-device-categories)
 ### Method 1: Add via App (Recommended)
-![app_add](doc/images/app_add.png)
+![app_add](doc/images/en/app_add.png)
 
 ### Method 2: Add via HA Dashboard
-![ha_add](doc/images/ha_add.png)
+![ha_add](doc/images/en/ha_add.png)
 
 ## Device Control Pathway
-![device_control](doc/images/device_control.png)
+![device_control](doc/images/en/device_control.png)
