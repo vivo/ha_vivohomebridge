@@ -7,7 +7,7 @@
 
 - 把接入HA平台的设备(实体)映射到vivo IoT生态中； 
 - 接入vivo IoT生态后可以使用vivo手机系统能力进行设备管理，如**vivo智慧生活**、**连接中心**、**蓝心小V语音助手**、**快捷指令等**手机系统能力无缝体验vivo IoT生态能力；
-![alt text](doc/images/image.png)
+![alt text](doc/images/cn/image.png)
 ## 集成优势
 - **打破生态壁垒：**  将您 HA 平台中连接的各类设备（无论品牌）无缝同步到 vivo 智慧生活 App 中。
 - **统一控制体验：** 直接在 vivo 智慧生活主界面集中控制所有已接入 HA 的设备，实现真正的一站式智能家居管理。
@@ -18,7 +18,7 @@
 ## vivo手机特有设备控制功能展示
 - `OriginOS` ≥ **6.0**
   
-![vphone](doc/images/vPhone.png)
+![vphone](doc/images/cn/vPhone.png)
 
 ## 品类支持范围
 我们会持续迭代支持更多品类，目前支持以下品类：
@@ -62,7 +62,7 @@ git clone https://github.com/vivo/ha_vivohomebridge.git
 3. **重启HA。**
 ### 安装
 在`HommeAssistant`后台:⚙️ 设置 > 设备与服务 > 添加集成 > 🔍搜索vivo或者vivohomebridge将出现的集成点击安装，然后根据提示一直点击下一步,最后点击完成即可,如下图；
-![install](doc/images/install.png)
+![install](doc/images/cn/install.png)
 ## 集成使用
 集成使用第一步需要先通过vivo智慧生活进行绑定之后方可正常使用。 这里分两种情况，两种绑定方式略有不同:
 1. 第一种是你的HomeAssistant和你的手机在同一个局域网内；
@@ -71,20 +71,20 @@ git clone https://github.com/vivo/ha_vivohomebridge.git
 ### 情况1: HomeAssistant和手机在同一个局域网内
 **注意：** 此方法只支持vivo手机
 示意图如下
-![vivo_bind](doc/images/vivo_bind.png)
+![vivo_bind](doc/images/cn/vivo_bind.png)
 ### 情况2：HomeAssistant和手机不在同一个局域网内或非vivo手机
 **注意：** vivo和非vivo手机都支持
 示意图如下:
-![bind](doc/images/bind.png)
+![bind](doc/images/cn/bind.png)
 
 ## 添加设备
 
 ### 前提条件
 你的`Home Assistant`已经添加了HA设备,并且是[支持的品类范围](#品类支持范围);
 ### 方式1：APP端添加(推荐)
-![app_add](doc/images/app_add.png)
+![app_add](doc/images/cn/app_add.png)
 ### 方式2：HA后台添加
-![ha_add](doc/images/ha_add.png)
+![ha_add](doc/images/cn/ha_add.png)
 
 ## 设备控制链路
-![device_control](doc/images/device_control.png)
+![device_control](doc/images/cn/device_control.png)
