@@ -133,11 +133,11 @@ class VHomeBridgeOptionsFlowHandler(OptionsFlow):
         self._bridge_data = {}
         VLog.debug(_TAG, "[__init__] VHomeBridgeOptionsFlowHandler...")
         VLog.debug(_TAG, f"[__init__] config_entry: {config_entry}")
-       
+
     @property
     def config_entry(self):
        return self._config_entry
-
+   
     def __generate_qr_code(self, bind_code: str):
         data = {"ha_bind_code": bind_code}
         json_data = json.dumps(data)
