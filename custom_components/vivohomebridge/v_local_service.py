@@ -1,9 +1,6 @@
 import socket
-from typing import List
-import netifaces
-import psutil
+# from typing import List
 import asyncio
-import random
 from homeassistant.helpers.network import get_url
 from zeroconf import NonUniqueNameException
 from zeroconf.asyncio import AsyncServiceInfo, AsyncZeroconf
@@ -55,7 +52,20 @@ class VLocalService:
         VLog.info(_TAG, "VLocalService ...")
         return
 
-    def _get_all_local_ips(self) -> list[bytes]:
+    def _get_all_local_ips(self) -> list[str]:
+        try:
+            import netifaces
+        except ImportError:
+            try:
+                import netifaces2 as netifaces
+            except ImportError:
+                raise ImportError(
+                    "The 'netifaces' library is required but not found. "
+                    "You can install it with:\n"
+                    "  pip install netifaces  (for most systems)\n"
+                    "  pip install netifaces2 (for Alpine/musl systems)"
+            )
+                
         ip_list = []
         for iface in netifaces.interfaces():
             addrs = netifaces.ifaddresses(iface)
