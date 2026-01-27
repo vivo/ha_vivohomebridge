@@ -34,8 +34,15 @@ We continuously expand supported categories. Currently, the following are suppor
 9. 🚪 Contact Sensor (e.g., door/window sensor)
 10. ☀️ Illuminance Sensor
 11. ⚙️ General Sensor
-12. 📺 TV Remote Controller
-13. 💦 Water Heater
+12. 🔋 battery
+13. 📈 Energy
+14. 🅦 Power
+15. 🅥 Voltage
+16. 🅐 Current
+17. 😷 PM10
+18. 😷 PM2.5
+19. 📺 TV Remote Controller
+20. 💦 Water Heater
 
 ## Requirements
 
@@ -48,9 +55,8 @@ We continuously expand supported categories. Currently, the following are suppor
 ### Download Methods
 
 #### Method 1: HACS (Recommended)
-- You can manually add the GitHub repository URL to HACS, and then download it via HACS.
-- It will later be submitted to the HACS official default repository, allowing direct search and installation.
-- search：`vivohomebridge`
+- HACS > In the search box, type `vivohomebridge` 
+    ![hacs-vivohomebridge](doc/images/en/hacs-vivohomebridge.png)
 #### Method 2: Git
 Download the integration using the `git` command in your terminal:
 Navigate to the HA `config/custom_components` directory, then run:

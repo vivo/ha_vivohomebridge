@@ -321,7 +321,7 @@ class DeviceManager:
             )
             return
 
-        VLog.info(_TAG, f"[async_data_report] target_id {target_id},props:{props}")
+        # VLog.info(_TAG, f"[async_data_report] target_id {target_id},props:{props}")
         bridge_name = self._bridge_entity.config_entry.data.get(
             VIVO_BRIDGE_DEVICE_NAME_CONFIG_KEY
         )
@@ -330,6 +330,14 @@ class DeviceManager:
         else:
             payload = [{"subId": target_id, "ver": 0, "props": props}]
 
+        #json格式打印payload
+        try:
+            json_string = json.dumps(payload, default=str)
+            VLog.debug(_TAG, f"[async_data_report] payload: {json_string}")
+        except Exception as e:
+            VLog.warning(_TAG, f"<async_data_report json error: {e}>")
+            
+        
         upload_result = await self._vhome.async_data_upload(bridge_name, payload)
         if upload_result != 0:
             VLog.info(

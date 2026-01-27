@@ -33,8 +33,15 @@
 9. 🚪开合传感器(如:门磁传感器)
 10. ☀️光照传感器
 11. ⚙️通用传感器
-12. 📺电视遥控器
-13. 💦热水器
+12. 🔋电池电量(battery)
+13. 📈能源电量/耗电量(Energy)
+14. 🅦功率(Power)
+15. 🅥电压(Voltage)
+16. 🅐电流(Current)
+17. 😷PM10
+18. 😷PM2.5
+19. 📺电视遥控器
+20. 💦热水器
 
 ## 环境要求
 - Home Assistant Core ≥ 2025.1
@@ -44,9 +51,9 @@
 
 ### 下载方式
 #### 方式1: HACS(推荐)
-- 目前可通过手动添加`Github`地址到`HACS`,然后通过`HACS`来下载。
-- 后续会提交到`HACS`官方`default`，则可以直接搜索下载；
-- 搜索名称：`vivohomebridge`
+- HACS > 在搜索框中输入`vivohomebridge`
+  ![hacs-vivohomebridge](doc/images/cn/hacs-vivohomebridge.png)
+  
 #### 方式2: Git
 通过终端 `git` 命令行方式下载集成
 命令行进入到HA的`config/custom_components`目录下，然后执行如下命令
