@@ -9,7 +9,7 @@ from enum import Enum
 
 from homeassistant.const import ATTR_ENTITY_ID
 from .vlog import VLog
-from ..v_attribute import VIVO_KEY_WORD_V_NAME, VIVO_ATTR_NAME_POWER, VIVO_KEY_WORD_H_NAME
+from ..v_attribute import VIVO_KEY_WORD_V_NAME, VIVO_ATTR_NAME_POWER, VIVO_KEY_WORD_H_NAME,VIVO_KEY_WORK_SENSOR_CLASS,VIVO_KEY_WORD_NAME
 from homeassistant.core import HomeAssistant
 from ..v_attritube_map import v2h_attributes_map
 
@@ -72,6 +72,27 @@ class VAttributeUtils:
                 return new_item
         VLog.info(_TAG, f"[get_model_item] no attribute support for {platform},{key}")
         return None
+    @staticmethod
+    def get_model_item_by_unit(platform: str, key: str, unit: str):
+        attributes_array = v2h_attributes_map.get(platform)
+        if not isinstance(attributes_array, list):
+            return None
+
+        key_norm = key
+        unit_norm = unit
+
+        for item in attributes_array:
+            if not isinstance(item, dict):
+                continue
+            h_name = item.get(VIVO_KEY_WORD_H_NAME)
+            if h_name == key_norm:
+                # 大小写敏感匹配单位
+                for k, v in item.items():
+                    if isinstance(k, str) and k == unit_norm and isinstance(v, dict):
+                        return v
+        return None
+
+    
 
     @staticmethod
     def h2v_mode_get_value(platform: str, key: str, val):
@@ -160,3 +181,40 @@ class VAttributeUtils:
                 if not found:
                     value_list.append({"value": h_item, "description": h_item})
         return value_list
+
+    @staticmethod
+    def flatten_multi_unit_item_case_sensitive(item: dict, unit: str):
+        """
+            return:
+            {
+                VIVO_KEY_WORD_V_NAME: "vivo_std_kWh",
+                VIVO_KEY_WORK_SENSOR_CLASS: SensorDeviceClass.ENERGY,
+                VIVO_KEY_WORD_H_NAME: "state",
+                "h2v_converter": self.h2v_prop,
+            }
+        """
+        # 基本类型与参数校验
+        if not isinstance(item, dict) or not isinstance(unit, str):
+            return None
+
+        # 精确匹配单位键（大小写敏感）
+        sub = item.get(unit)
+        if not isinstance(sub, dict):
+            # 未找到对应单位或结构不正确
+            return None
+
+        v_name = sub.get(VIVO_KEY_WORD_V_NAME)
+        if not isinstance(v_name, str):
+            return None
+
+        # 构造结果：合并公共字段 + 该单位的 VIVO_KEY_WORD_V_NAME
+        result = {
+            VIVO_KEY_WORD_V_NAME: v_name,
+        }
+
+        # 复制公共字段（仅复制这些键，避免把其他单位键带进来）
+        for k in (VIVO_KEY_WORK_SENSOR_CLASS, VIVO_KEY_WORD_H_NAME, "h2v_converter", "v2h_converter"):
+            if k in item:
+                result[k] = item[k]
+
+        return result

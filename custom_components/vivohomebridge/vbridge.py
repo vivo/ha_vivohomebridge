@@ -55,7 +55,8 @@ from .v_attribute import (
     VIVO_HA_COMMON_ATTR_MODEL,
     HA_ATTR_NAME_POWER,
     VIVO_KEY_WORD_V_NAME,
-    VIVI_KEY_WORK_SENSOR_CLASS,
+    VIVO_KEY_WORD_H_NAME,
+    VIVO_KEY_WORK_SENSOR_CLASS,
 )
 
 # new device integration
@@ -271,14 +272,24 @@ class VBridgeEntity:
             device_class = state.attributes.get(ATTR_DEVICE_CLASS)
             target_map = next( item 
                                     for item in attributes_maps
-                                    if item[VIVI_KEY_WORK_SENSOR_CLASS] ==device_class 
+                                    if item[VIVO_KEY_WORK_SENSOR_CLASS] ==device_class 
                                     )
-            attributes_map.append(target_map)
+            
             unit = new_attrs.get(CONF_UNIT_OF_MEASUREMENT)
             if device_class == SensorDeviceClass.TEMPERATURE:
+                attributes_map.append(target_map)
                 current_attrs["state"] = VSensorModel.sensor_h2v_val(
                     device_class, unit, new_state.state
                 )
+            elif (device_class == SensorDeviceClass.POWER 
+                  or device_class == SensorDeviceClass.ENERGY
+                  or device_class == SensorDeviceClass.VOLTAGE
+                  or device_class == SensorDeviceClass.CURRENT):
+                flattened_map = VAttributeUtils.flatten_multi_unit_item_case_sensitive(target_map, unit)
+                attributes_map.append(flattened_map)
+            else:
+                attributes_map.append(target_map)
+            
         else:
             VLog.warning(_TAG, f"{entity_id} Unsupported platform:{platform}")
             return
@@ -398,17 +409,25 @@ class VBridgeEntity:
                         device_class = self.hass.states.get(entity_id).attributes.get(
                             ATTR_DEVICE_CLASS
                         )
+                        _device_name = self.hass.states.get(entity_id).attributes.get(ATTR_FRIENDLY_NAME)
+                        VLog.info(
+                            _TAG,
+                            f"Sensor device_class={device_class} name={_device_name},entity_id={entity_id}",
+                        )
                         if (
                             device_class == SensorDeviceClass.TEMPERATURE
                             or device_class == SensorDeviceClass.HUMIDITY
                             or device_class == SensorDeviceClass.ILLUMINANCE
                             or device_class == SensorDeviceClass.ENUM
+                            or device_class == SensorDeviceClass.BATTERY 
+                            or device_class == SensorDeviceClass.ENERGY
+                            or device_class == SensorDeviceClass.CURRENT
+                            or device_class == SensorDeviceClass.VOLTAGE
+                            or device_class == SensorDeviceClass.POWER
+                            or device_class == SensorDeviceClass.PM10
+                            or device_class == SensorDeviceClass.PM25
                         ):
-                            """只支持温度、湿度、光照支持"""
                             _item: dict = {}
-                            _device_name = self.hass.states.get(
-                                entity_id
-                            ).attributes.get(ATTR_FRIENDLY_NAME)
                             _item[ATTR_ENTITY_ID] = entity_id
                             _item[VIVO_HA_PLATFORM_PKY_KEY] = VIVO_HA_SENSORS_PK.get(
                                 device_class
@@ -514,10 +533,17 @@ class VBridgeEntity:
         if not default_original_name:
             VLog.info(_TAG, f"[generate_device_name] {entity_id} no name")
             return None
+        pattern = re.compile(
+            r'[^a-zA-Z0-9\u4E00-\u9FA5\u00A5|?:#$/!{}()~<>\'.,;+=_*￥$@%\[\]"&\^《》：；”“’‘【】——，。…\\！]'
+        )
+        if default_original_name is not None and len(default_original_name) > 0:
+            default_original_name = re.sub(pattern, "", default_original_name)
+
         if len(default_original_name) > 100:
             _result = default_original_name[:100]
         else:
             _result = default_original_name
+            
         if _entity_obj is not None and _entity_obj.device_id:
             _device_id = _entity_obj.device_id
             _device = dr.async_get(hass).async_get(_device_id)
@@ -549,9 +575,6 @@ class VBridgeEntity:
         ]
         if len(unregister_devices) > 0:
             index: int = 0
-            pattern = re.compile(
-                r'[^a-zA-Z0-9\u4E00-\u9FA5\u00A5|?:#$/!{}()~<>\'.,;+=_*￥$@%\[\]"&\^《》：；”“’‘【】——，。…\\！]'
-            )
             VLog.debug(_TAG, "unregister_devices list ----------------------")
             for item in unregister_devices:
                 entity_obj: er.RegistryEntry = er.async_get(self.hass).async_get(
@@ -562,7 +585,6 @@ class VBridgeEntity:
                 item[VIVO_HA_KEY_WORLD_DEV_LOGIC_MAC] = (
                     f"{entity_obj.id}.{item[ATTR_ENTITY_ID].split('.')[0]}"
                 )
-                item[ATTR_NAME] = re.sub(pattern, "", item[ATTR_NAME])
                 if entity_obj.id is not None:
                     del item[ATTR_ENTITY_ID]
 
@@ -615,15 +637,24 @@ class VBridgeEntity:
                 device_class = attributes.get(ATTR_DEVICE_CLASS)
                 target_map = next( item 
                                       for item in attributes_maps
-                                      if item[VIVI_KEY_WORK_SENSOR_CLASS] ==device_class 
+                                      if item[VIVO_KEY_WORK_SENSOR_CLASS] ==device_class 
                                       )
-                attributes_map.append(target_map)
+                
                 unit = attributes.get(CONF_UNIT_OF_MEASUREMENT)
                 if device_class == SensorDeviceClass.TEMPERATURE:
+                    attributes_map.append(target_map)
                     attributes["state"] = self.sensor_model.sensor_h2v_val(
                         device_class, unit, device_state.state
                     )
+                elif (device_class == SensorDeviceClass.POWER 
+                  or device_class == SensorDeviceClass.ENERGY
+                  or device_class == SensorDeviceClass.VOLTAGE
+                  or device_class == SensorDeviceClass.CURRENT):
+                    flattened_map = VAttributeUtils.flatten_multi_unit_item_case_sensitive(target_map, unit)
+                    attributes_map.append(flattened_map)
+                    attributes["state"] = device_state.state
                 else:
+                    attributes_map.append(target_map)
                     attributes["state"] = device_state.state
             elif device_platform == Platform.WATER_HEATER:
                 attributes_map = self.water_heater_model.attributes_map

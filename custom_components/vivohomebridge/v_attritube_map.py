@@ -1228,16 +1228,6 @@ v2h_attributes_map = {
             "access": ["read", "notify"],
         },
         {
-            VIVO_KEY_WORD_NAME: "vivo_std_battery",
-            VIVO_KEY_WORD_H_NAME: "current_battery",
-            "description": "电池电量",
-            "value_type": "number",
-            "format": "int",
-            "value_range": [0, 100, 1],
-            "access": ["read", "notify"],
-            "unit": "%",
-        },
-        {
             VIVO_KEY_WORD_NAME: "vivo_std_humidity",
             VIVO_KEY_WORD_H_NAME: "current_humidity",
             "description": "湿度",
@@ -1277,7 +1267,384 @@ v2h_attributes_map = {
                 {"value": "*", "description": "*", "compare": "*"},
             ],
             "unit": "",
-        }
+        },
+        {
+            VIVO_KEY_WORD_NAME: "vivo_std_battery",
+            VIVO_KEY_WORD_H_NAME: "battery",
+            "description": "电池电量",
+            "value_type": "number",
+            "format": "int",
+            "value_range": [0, 100, 1],
+            "access": ["read", "notify"],
+            "unit": "%",
+        },
+        {
+            VIVO_KEY_WORD_H_NAME:"power",
+            "mW": {
+                VIVO_KEY_WORD_NAME: "vivo_std_mW",
+                "description": "功率(毫瓦)",
+                "value_type": "number",
+                "format": "float",
+                "value_range": [
+                    0,
+                    100000,
+                    0.001
+                ],
+                "access": [
+                    "read",
+                    "notify"
+                ],
+                "unit": "mW"
+            },
+            "W": {
+                VIVO_KEY_WORD_NAME: "vivo_std_W",
+                "description": "功率(瓦特)",
+                "value_type": "number",
+                "format": "float",
+                "value_range": [
+                    0,
+                    1000,
+                    0.01
+                ],
+                "access": [
+                    "read",
+                    "notify"
+                ],
+                "unit": "W"
+            },
+            "kW": {
+                VIVO_KEY_WORD_NAME: "vivo_std_kW",
+                "description": "功率(千瓦)",
+                "value_type": "number",
+                "format": "float",
+                "value_range": [
+                    0,
+                    1000,
+                    0.01
+                ],
+                "access": [
+                    "read",
+                    "notify"
+                ],
+                "unit": "kW"
+            },
+            "MW": {
+                VIVO_KEY_WORD_NAME: "vivo_std_M_W",
+                "description": "功率(兆瓦)",
+                "value_type": "number",
+                "format": "float",
+                "value_range": [
+                    0,
+                    1000,
+                    0.01
+                ],
+                "access": [
+                    "read",
+                    "notify"
+                ],
+                "unit": "MW"
+            },
+            "GW": {
+                VIVO_KEY_WORD_NAME: "vivo_std_GW",
+                "description": "功率(吉瓦)",
+                "value_type": "number",
+                "format": "float",
+                "value_range": [
+                    0,
+                    1000,
+                    0.01
+                ],
+                "access": [
+                    "read",
+                    "notify"
+                ],
+                "unit": "GW"
+            },
+            "TW": {
+                VIVO_KEY_WORD_NAME: "vivo_std_TW",
+                "description": "功率(太瓦)",
+                "value_type": "number",
+                "format": "float",
+                "value_range": [
+                    0,
+                    1000,
+                    0.01
+                ],
+                "access": [
+                    "read",
+                    "notify"
+                ],
+                "unit": "TW"
+            }
+        },
+        {
+            VIVO_KEY_WORD_H_NAME:"voltage",
+            "µV": {
+                VIVO_KEY_WORD_NAME: "vivo_std_µV",
+                "description": "电压(微伏)",
+                "value_type": "number",
+                "format": "float",
+                "value_range": [
+                    0,
+                    1000,
+                    0.001
+                ],
+                "access": [
+                    "read",
+                    "notify"
+                ],
+                "unit": "µV"
+            },
+            "mV": {
+                VIVO_KEY_WORD_NAME: "vivo_std_mV",
+                "description": "电压(毫伏)",
+                "value_type": "number",
+                "format": "float",
+                "value_range": [
+                    0,
+                    1000,
+                    0.01
+                ],
+                "access": [
+                    "read",
+                    "notify"
+                ],
+                "unit": "mV"
+            },
+            "V": {
+                VIVO_KEY_WORD_NAME: "vivo_std_V",
+                "description": "电压(伏特)",
+                "value_type": "number",
+                "format": "float",
+                "value_range": [
+                    0,
+                    1000,
+                    0.1
+                ],
+                "access": [
+                    "read",
+                    "notify"
+                ],
+                "unit": "V"
+            },
+            "kV": {
+                VIVO_KEY_WORD_NAME: "vivo_std_kV",
+                "description": "电压(千伏)",
+                "value_type": "number",
+                "format": "float",
+                "value_range": [
+                    0,
+                    1000,
+                    0.01
+                ],
+                "access": [
+                    "read",
+                    "notify"
+                ],
+                "unit": "kV"
+            }
+        },
+        {
+            VIVO_KEY_WORD_H_NAME:"energy",
+            "mWh": {
+                VIVO_KEY_WORD_NAME: "vivo_std_mWh",
+                "description": "耗电量(毫瓦时)",
+                "value_type": "number",
+                "format": "float",
+                "value_range": [
+                    0,
+                    100000,
+                    0.001
+                ],
+                "access": [
+                    "read",
+                    "notify"
+                ],
+                "unit": "mWh"
+            },
+            "Wh": {
+                VIVO_KEY_WORD_NAME: "vivo_std_Wh",
+                "description": "耗电量(瓦时)",
+                "value_type": "number",
+                "format": "float",
+                "value_range": [
+                    0,
+                    100000,
+                    0.01
+                ],
+                "access": [
+                    "read",
+                    "notify"
+                ],
+                "unit": "Wh"
+            },
+            "kWh": {
+                VIVO_KEY_WORD_NAME: "vivo_std_kWh",
+                "description": "耗电量(千瓦时/度)",
+                "value_type": "number",
+                "format": "float",
+                "value_range": [
+                    0,
+                    100000,
+                    0.01
+                ],
+                "access": [
+                    "read",
+                    "notify"
+                ],
+                "unit": "kWh"
+            },
+            "MWh": {
+                VIVO_KEY_WORD_NAME: "vivo_std_M_Wh",
+                "description": "耗电量(兆瓦时)",
+                "value_type": "number",
+                "format": "float",
+                "value_range": [
+                    0,
+                    100000,
+                    0.01
+                ],
+                "access": [
+                    "read",
+                    "notify"
+                ],
+                "unit": "MWh"
+            },
+            "GWh": {
+                VIVO_KEY_WORD_NAME: "vivo_std_GWh",
+                "description": "耗电量(吉瓦时)",
+                "value_type": "number",
+                "format": "float",
+                "value_range": [
+                    0,
+                    100000,
+                    0.01
+                ],
+                "access": [
+                    "read",
+                    "notify"
+                ],
+                "unit": "GWh"
+            },
+            "TWh": {
+                VIVO_KEY_WORD_NAME: "vivo_std_TWh",
+                "description": "耗电量(太瓦时)",
+                "value_type": "number",
+                "format": "float",
+                "value_range": [
+                    0,
+                    100000,
+                    0.01
+                ],
+                "access": [
+                    "read",
+                    "notify"
+                ],
+                "unit": "TWh"
+            }
+        },
+        {
+            VIVO_KEY_WORD_H_NAME: "current",
+            "mA": {
+                VIVO_KEY_WORD_NAME: "vivo_std_mA",
+                "description": "电流(毫安)",
+                "value_type": "number",
+                "format": "float",
+                "value_range": [
+                    0,
+                    100000,
+                    0.01
+                ],
+                "access": [
+                    "read",
+                    "notify"
+                ],
+                "unit": "mA"
+            },
+            "A": {
+                VIVO_KEY_WORD_NAME: "vivo_std_A",
+                "description": "电流(安培)",
+                "value_type": "number",
+                "format": "float",
+                "value_range": [
+                    0,
+                    100,
+                    0.01
+                ],
+                "access": [
+                    "read",
+                    "notify"
+                ],
+                "unit": "A"
+            }
+        },
+        {
+            VIVO_KEY_WORD_NAME: "vivo_std_ph",
+            VIVO_KEY_WORD_H_NAME: "ph",
+            "description": "PH值",
+            "value_type": "number",
+            "format": "float",
+            "value_range": [
+                0,
+                14,
+                0.01
+            ],
+            "access": [
+                "read",
+                "notify"
+            ]
+        },
+        {
+            VIVO_KEY_WORD_NAME: "vivo_std_pm1",
+            VIVO_KEY_WORD_H_NAME: "pm1",
+            "description": "PM1值",
+            "value_type": "number",
+            "format": "float",
+            "value_range": [
+                0,
+                300,
+                0.01
+            ],
+            "access": [
+                "read",
+                "notify"
+            ],
+            "unit": "µg/m³"
+        },
+        {
+            VIVO_KEY_WORD_NAME: "vivo_std_pm25",
+            VIVO_KEY_WORD_H_NAME: "pm25",
+            "description": "PM2.5值",
+            "value_type": "number",
+            "format": "float",
+            "value_range": [
+                0,
+                300,
+                0.01
+            ],
+            "access": [
+                "read",
+                "notify"
+            ],
+            "unit": "µg/m³"
+        },
+        {
+            VIVO_KEY_WORD_NAME: "vivo_std_pm10",
+            VIVO_KEY_WORD_H_NAME: "pm10",
+            "description": "PM10值",
+            "value_type": "number",
+            "format": "float",
+            "value_range": [
+                0,
+                300,
+                0.01
+            ],
+            "access": [
+                "read",
+                "notify"
+            ],
+            "unit": "µg/m³"
+        },
     ]
 
 }
