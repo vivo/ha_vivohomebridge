@@ -281,7 +281,7 @@ class VHomeBridgeOptionsFlowHandler(OptionsFlow):
             return self.async_abort(reason=self.qrcode_abort_msg_id)
         return await self.async_step_select_device()
 
-    async def async_step_qrcode_process(self) -> ConfigFlowResult:
+    async def async_step_qrcode_process(self,user_input: dict[str, Any] | None = None) -> ConfigFlowResult:
         VLog.info(_TAG, f"[async_step_qrcode_process] ...")
         errors: dict[str, str] = {}
         description_placeholders: str = {}
