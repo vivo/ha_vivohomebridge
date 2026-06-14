@@ -1945,24 +1945,14 @@ class DeviceManager:
                 model = ""
                 area = ""
                 entity_id = device[VIVO_DEVICE_ENTITY_ID_KEY]
-                entity_obj = er.async_get(self._bridge_entity.hass).async_get(entity_id)
                 device_name = device.get(ATTR_FRIENDLY_NAME, "")
-                if entity_obj is None or entity_obj.device_id is None:
-                    VLog.warning(
-                        _TAG,
-                        f"[set_config_devices][{reason}] {entity_id}:"
-                        f"entity_obj or entity_obj.device_id is None",
+                _device = Utils.get_device_of_entity(self._bridge_entity.hass, entity_id)
+                if _device is not None:
+                    manufacturer = _device.manufacturer or ""
+                    model = _device.model or ""
+                    device_name = self._generate_device_name_of_bridge(
+                        entity_id, device_name, _device
                     )
-                else:
-                    _device = dr.async_get(self._bridge_entity.hass).async_get(
-                        entity_obj.device_id
-                    )
-                    if _device is not None:
-                        manufacturer = _device.manufacturer or ""
-                        model = _device.model or ""
-                        device_name = self._generate_device_name_of_bridge(
-                            entity_id, device_name, _device
-                        )
                 if device_name is None:
                     device_name = entity_id
                 new_device = dev_reg.async_get_or_create(

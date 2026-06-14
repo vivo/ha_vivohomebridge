@@ -524,8 +524,9 @@ class VBridgeEntity:
         if _entity_obj is None:
             VLog.warning(_TAG,F"entity_id:{entity_id} _entity_obj is None")
             return None
-        if _entity_obj.device_id is None:
-            VLog.warning(_TAG,f"entity_id:{entity_id} device_id is None")
+        _device = Utils.get_device_of_entity(hass, entity_id)
+        if _device is None:
+            VLog.warning(_TAG, f"entity_id:{entity_id} device is None")
             return None
         if not _entity_obj.id:
             VLog.info(_TAG, f"[generate_device_name] {entity_id} no id")
@@ -544,9 +545,6 @@ class VBridgeEntity:
         else:
             _result = default_original_name
             
-        if _entity_obj is not None and _entity_obj.device_id:
-            _device_id = _entity_obj.device_id
-            _device = dr.async_get(hass).async_get(_device_id)
         if platform_name:
             _result += f" ({platform_name})"
         return _result
@@ -720,10 +718,7 @@ class VBridgeEntity:
 
     def _sub_dev_common_attributes_get(self, entity_id: str) -> dict | None:
         common_attributes = {}
-        entity_obj: er.RegistryEntry = er.async_get(self.hass).async_get(entity_id)
-        if entity_obj is None or entity_obj.device_id is None:
-            return common_attributes
-        device: dr.DeviceEntry = dr.async_get(self.hass).async_get(entity_obj.device_id)
+        device = Utils.get_device_of_entity(self.hass, entity_id)
         for item in VIVO_HA_COMMON_ATTR_LIST:
             if item == VIVO_HA_COMMOM_ATTR_SOFTVER:
                 if device.sw_version is not None and device.sw_version != "":

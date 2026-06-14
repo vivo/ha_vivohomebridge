@@ -39,6 +39,7 @@ from .v_sensor_model import VSensorModel, VIVO_HA_SENSORS_PK
 from .v_switch_model import VSwitchModel
 from .v_tv_model import VTVModelUtils
 from .v_utils.vlog import VLog
+from .utils import Utils
 
 _TAG = "model"
 
@@ -53,10 +54,10 @@ class VModel:
         self.platform = entity_id.split(".")[0]
         self.entity_obj = er.async_get(hass).async_get(entity_id)
         self.model: dict = {}
-        if self.entity_obj is None or self.entity_obj.device_id is None:
-            VLog.error(_TAG, f"{entity_id}:entity_obj or entity_obj.device_id is None")
+        if self.entity_obj is None:
+            VLog.error(_TAG, f"{entity_id}:entity_obj is None")
             return
-        self.device = dr.async_get(hass).async_get(self.entity_obj.device_id)
+        self.device = Utils.get_device_of_entity(hass, entity_id)
         self.state = self.hass.states.get(entity_id)
         if self.state is None:
             self.entity_attributes = {}
@@ -69,11 +70,11 @@ class VModel:
         self.entity_model: list = []
         pky = VIVO_HA_PLATFORM_PK.get(self.platform)
         manufacturer_name: str = "万物互联有限公司"
-        self.phyMac: str = self.entity_obj.device_id
         if not self.entity_obj.id:
             self.logicMac = None
         else:
             self.logicMac: str = f"{self.entity_obj.id}.{self.platform}"
+        self.phyMac: str = self.entity_obj.device_id if self.entity_obj.device_id is not None else self.logicMac
         if self.platform == Platform.LIGHT:
             self.entity_model = VLightModel.model_get(
                 self.hass, self.entity_id, self.entity_attributes
