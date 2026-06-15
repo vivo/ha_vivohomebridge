@@ -11,6 +11,7 @@ import json
 import re
 from homeassistant.components.binary_sensor import BinarySensorDeviceClass
 from homeassistant.components.cover import CoverDeviceClass
+from homeassistant.components.input_boolean import DOMAIN as INPUT_BOOLEAN_DOMAIN
 from homeassistant.components.media_player import MediaPlayerDeviceClass
 from homeassistant.components.sensor import SensorDeviceClass
 from homeassistant.components.switch import SwitchDeviceClass
@@ -80,6 +81,7 @@ VIVO_HA_PLATFORM_SUPPORT_LIST = [
     Platform.COVER,
     Platform.BINARY_SENSOR,
     Platform.SENSOR,
+    INPUT_BOOLEAN_DOMAIN,
 ]
 _TAG = "bridge"
 
@@ -801,6 +803,8 @@ class VBridgeEntity:
                 return
         elif domain == Platform.WATER_HEATER:
             attributes_map = self.water_heater_model.attributes_map
+        elif domain == INPUT_BOOLEAN_DOMAIN:
+            attributes_map = self.switch_model.attributes_map
         else:
             VLog.info(_TAG, f"not support {domain}")
             return

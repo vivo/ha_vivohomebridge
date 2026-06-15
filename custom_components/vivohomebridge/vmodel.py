@@ -19,6 +19,7 @@ from homeassistant.helpers import device_registry as dr, entity_registry as er
 from homeassistant.components.switch import (
     SwitchDeviceClass,
 )
+from homeassistant.components.input_boolean import DOMAIN as INPUT_BOOLEAN_DOMAIN
 from .const import (
     VIVO_HA_PLATFORM_PK,
     VIVO_HA_PLATFORM_PKY_KEY,
@@ -118,6 +119,11 @@ class VModel:
                 self.hass, self.entity_id, self.entity_attributes
             )
             pky = VIVO_HA_SENSORS_PK.get(self.entity_attributes.get(ATTR_DEVICE_CLASS))
+        elif self.platform == INPUT_BOOLEAN_DOMAIN:
+            self.entity_model = VSwitchModel.model_get(
+                self.hass, self.entity_id, self.entity_attributes
+            )
+            pky = VIVO_HA_PLATFORM_SWITCH_PK
         else:
             VLog.error(_TAG, f"[init]platform:{self.platform} not support")
             return

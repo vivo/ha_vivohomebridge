@@ -6,6 +6,7 @@ Licensed under the Apache License, Version 2.0 (the "License");
 """
 
 from homeassistant.const import Platform
+from homeassistant.components.input_boolean import DOMAIN as INPUT_BOOLEAN_DOMAIN
 
 DOMAIN = "vivohomebridge"
 VIVO_HA_BRIDGE_VERSION = "1.0.0"
@@ -123,4 +124,5 @@ VIVO_HA_PLATFORM_PK: dict = {
     Platform.SENSOR: VIVO_HA_PLATFORM_HUMIDITY_TEMPERATURE_PK,
     Platform.WATER_HEATER: VIVO_HA_PLATFORM_WATER_HEATER_PK,
     Platform.BINARY_SENSOR: VIVO_HA_PLATFORM_COMMON_SENSOR_PK,
+    INPUT_BOOLEAN_DOMAIN: VIVO_HA_PLATFORM_SWITCH_PK,
 }
