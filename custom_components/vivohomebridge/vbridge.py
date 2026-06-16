@@ -269,6 +269,10 @@ class VBridgeEntity:
             if _current_attrs is not None and len(_current_attrs) != 0:
                 for attr_name, attr_value in _current_attrs.items():
                     current_attrs[attr_name] = attr_value
+        elif platform == INPUT_BOOLEAN_DOMAIN:
+            attributes_map = self.switch_model.attributes_map
+            if new_state.state != old_state.state:
+                current_attrs["power"] = new_state.state
         elif platform == Platform.BINARY_SENSOR or platform == Platform.SENSOR:
             attributes_maps = self.sensor_model.attributes_map
             device_class = state.attributes.get(ATTR_DEVICE_CLASS)
@@ -659,6 +663,8 @@ class VBridgeEntity:
             elif device_platform == Platform.WATER_HEATER:
                 attributes_map = self.water_heater_model.attributes_map
                 attributes["state"] = device_state.state
+            elif device_platform == INPUT_BOOLEAN_DOMAIN:
+                attributes_map = self.switch_model.attributes_map
             else:
                 VLog.info(_TAG, f"[flush] not support :{device_platform}")
                 return
