@@ -11,6 +11,7 @@ import json
 import re
 from homeassistant.components.binary_sensor import BinarySensorDeviceClass
 from homeassistant.components.cover import CoverDeviceClass
+from homeassistant.components.input_boolean import DOMAIN as INPUT_BOOLEAN_DOMAIN
 from homeassistant.components.media_player import MediaPlayerDeviceClass
 from homeassistant.components.sensor import SensorDeviceClass
 from homeassistant.components.switch import SwitchDeviceClass
@@ -80,6 +81,7 @@ VIVO_HA_PLATFORM_SUPPORT_LIST = [
     Platform.COVER,
     Platform.BINARY_SENSOR,
     Platform.SENSOR,
+    INPUT_BOOLEAN_DOMAIN,
 ]
 _TAG = "bridge"
 
@@ -267,6 +269,10 @@ class VBridgeEntity:
             if _current_attrs is not None and len(_current_attrs) != 0:
                 for attr_name, attr_value in _current_attrs.items():
                     current_attrs[attr_name] = attr_value
+        elif platform == INPUT_BOOLEAN_DOMAIN:
+            attributes_map = self.switch_model.attributes_map
+            if new_state.state != old_state.state:
+                current_attrs["power"] = new_state.state
         elif platform == Platform.BINARY_SENSOR or platform == Platform.SENSOR:
             attributes_maps = self.sensor_model.attributes_map
             device_class = state.attributes.get(ATTR_DEVICE_CLASS)
@@ -524,8 +530,9 @@ class VBridgeEntity:
         if _entity_obj is None:
             VLog.warning(_TAG,F"entity_id:{entity_id} _entity_obj is None")
             return None
-        if _entity_obj.device_id is None:
-            VLog.warning(_TAG,f"entity_id:{entity_id} device_id is None")
+        _device = Utils.get_device_of_entity(hass, entity_id)
+        if _device is None:
+            VLog.warning(_TAG, f"entity_id:{entity_id} device is None")
             return None
         if not _entity_obj.id:
             VLog.info(_TAG, f"[generate_device_name] {entity_id} no id")
@@ -544,9 +551,6 @@ class VBridgeEntity:
         else:
             _result = default_original_name
             
-        if _entity_obj is not None and _entity_obj.device_id:
-            _device_id = _entity_obj.device_id
-            _device = dr.async_get(hass).async_get(_device_id)
         if platform_name:
             _result += f" ({platform_name})"
         return _result
@@ -659,6 +663,8 @@ class VBridgeEntity:
             elif device_platform == Platform.WATER_HEATER:
                 attributes_map = self.water_heater_model.attributes_map
                 attributes["state"] = device_state.state
+            elif device_platform == INPUT_BOOLEAN_DOMAIN:
+                attributes_map = self.switch_model.attributes_map
             else:
                 VLog.info(_TAG, f"[flush] not support :{device_platform}")
                 return
@@ -720,10 +726,7 @@ class VBridgeEntity:
 
     def _sub_dev_common_attributes_get(self, entity_id: str) -> dict | None:
         common_attributes = {}
-        entity_obj: er.RegistryEntry = er.async_get(self.hass).async_get(entity_id)
-        if entity_obj is None or entity_obj.device_id is None:
-            return common_attributes
-        device: dr.DeviceEntry = dr.async_get(self.hass).async_get(entity_obj.device_id)
+        device = Utils.get_device_of_entity(self.hass, entity_id)
         for item in VIVO_HA_COMMON_ATTR_LIST:
             if item == VIVO_HA_COMMOM_ATTR_SOFTVER:
                 if device.sw_version is not None and device.sw_version != "":
@@ -806,6 +809,8 @@ class VBridgeEntity:
                 return
         elif domain == Platform.WATER_HEATER:
             attributes_map = self.water_heater_model.attributes_map
+        elif domain == INPUT_BOOLEAN_DOMAIN:
+            attributes_map = self.switch_model.attributes_map
         else:
             VLog.info(_TAG, f"not support {domain}")
             return
