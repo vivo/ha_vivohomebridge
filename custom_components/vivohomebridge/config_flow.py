@@ -1,4 +1,4 @@
-"""
+﻿"""
 Copyright 2024 vivo Mobile Communication Co., Ltd.
 Licensed under the Apache License, Version 2.0 (the "License");
 
@@ -29,14 +29,13 @@ from . import DeviceManager
 from .const import (
     DOMAIN,
     GLOB_NAME,
+    VIVO_BRIDGE_HOST_LIST_KEY,
     VIVO_HA_CONFIG_DATA_DEVICES_KEY,
     VIVO_HA_CONF_DEVICE_LIST,
     EVENT_VHOME_DEV_UNREG_RESULT,
     VIVO_HA_KEY_WORLD_DEV_LOGIC_MAC,
     VIVO_BRIDGE_DEVICE_NAME_CONFIG_KEY,
-    VIVO_BRIDGE_HOST_CONFIG_KEY,
     VIVO_BRIDGE_MAC_CONFIG_KEY,
-    VIVO_BRIDGE_PORT_CONFIG_KEY,
     VIVO_DEVICE_NAME_CONFIG_KEY,
     VIVO_BRIDGE_USER_CODE_CONFIG_KEY,
     VIVO_BRIDGE_BOOT_UP_REASON_KEY,
@@ -204,15 +203,12 @@ class VHomeBridgeOptionsFlowHandler(OptionsFlow):
                 bind_result_code = bind_result_dict["code"]
                 if bind_result_code == 10000:
                     device_name = bind_result_dict["data"][VIVO_DEVICE_NAME_CONFIG_KEY]
-                    ip = bind_result_dict["data"]["ip"][0].split(":")
-                    host = ip[0]
-                    port = ip[1]
+                    host_list = bind_result_dict["data"]["ip"]
                     cp_data = {
                         VIVO_BRIDGE_DEVICE_NAME_CONFIG_KEY: device_name,
-                        VIVO_BRIDGE_HOST_CONFIG_KEY: host,
-                        VIVO_BRIDGE_PORT_CONFIG_KEY: port,
-                        VIVO_BRIDGE_USER_CODE_CONFIG_KEY: bind_code,
                         VIVO_BRIDGE_MAC_CONFIG_KEY: mac,
+                        VIVO_BRIDGE_HOST_LIST_KEY : host_list,
+                        VIVO_BRIDGE_USER_CODE_CONFIG_KEY: bind_code,
                     }
                     self._bridge_data = cp_data
                     VLog.info(_TAG, f"[wait_for_scanned] scanned {bind_code}")
@@ -370,22 +366,22 @@ class VHomeBridgeOptionsFlowHandler(OptionsFlow):
             await DeviceManager.instance().on_async_ui_select_device(
                 select_device_entity_ids
             )
-            host = ""
-            port = ""
             mac = ""
-            if VIVO_BRIDGE_HOST_CONFIG_KEY in self.config_entry.data:
-                host = self.config_entry.data.get(VIVO_BRIDGE_HOST_CONFIG_KEY)
-            if VIVO_BRIDGE_PORT_CONFIG_KEY in self.config_entry.data:
-                port = self.config_entry.data.get(VIVO_BRIDGE_PORT_CONFIG_KEY)
+            host_list = None
+            bind_code=""
             if VIVO_BRIDGE_MAC_CONFIG_KEY in self.config_entry.data:
                 mac = self.config_entry.data.get(VIVO_BRIDGE_MAC_CONFIG_KEY)
+            if VIVO_BRIDGE_HOST_LIST_KEY in self.config_entry.data:
+                host_list = self.config_entry.data.get(VIVO_BRIDGE_HOST_LIST_KEY)
+            if VIVO_BRIDGE_USER_CODE_CONFIG_KEY in self.config_entry.data:
+                bind_code = self.config_entry.data.get(VIVO_BRIDGE_USER_CODE_CONFIG_KEY)
             return self.async_create_entry(
                 title=f"网关设备id：{bridge_device_name}",
                 data={
                     VIVO_BRIDGE_DEVICE_NAME_CONFIG_KEY: bridge_device_name,
-                    VIVO_BRIDGE_HOST_CONFIG_KEY: host,
-                    VIVO_BRIDGE_PORT_CONFIG_KEY: port,
                     VIVO_BRIDGE_MAC_CONFIG_KEY: mac,
+                    VIVO_BRIDGE_HOST_LIST_KEY: host_list,
+                    VIVO_BRIDGE_USER_CODE_CONFIG_KEY: bind_code,
                 },
             )
         bridge_entity = DeviceManager.instance().get_bridge_entity()

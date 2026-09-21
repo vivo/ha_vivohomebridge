@@ -309,12 +309,11 @@ class VSensorModel:
             if battery_model:
                 model.append(battery_model)
         elif device_class == SensorDeviceClass.ENERGY:
-            unit = entity_attributes.get(CONF_UNIT_OF_MEASUREMENT)  
-            VLog.info(_TAG, f"[model_get]energy unit:{unit}")
+            unit = entity_attributes.get(CONF_UNIT_OF_MEASUREMENT)
             energy_model = VAttributeUtils.get_model_item_by_unit(Platform.SENSOR, "energy", unit)
             if energy_model:
                 model.append(energy_model)
-        elif device_class == SensorDeviceClass.CURRENT:  
+        elif device_class == SensorDeviceClass.CURRENT:
             unit = entity_attributes.get(CONF_UNIT_OF_MEASUREMENT)
             current_model = VAttributeUtils.get_model_item_by_unit(Platform.SENSOR, "current", unit)
             if current_model:

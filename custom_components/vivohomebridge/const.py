@@ -1,4 +1,4 @@
-"""
+﻿"""
 Copyright 2024 vivo Mobile Communication Co., Ltd.
 Licensed under the Apache License, Version 2.0 (the "License");
 
@@ -8,10 +8,11 @@ Licensed under the Apache License, Version 2.0 (the "License");
 from homeassistant.const import Platform
 
 DOMAIN = "vivohomebridge"
-VIVO_HA_BRIDGE_VERSION = "1.0.0"
+VIVO_HA_BRIDGE_VERSION = "2026.09.21.1789990709"
 MANUFACTURER = "Home Assistant"
 GLOB_NAME = "HA中控"
 VHOME_URL = "https://iot.vivo.com.cn"
+# VHOME_URL= "https://iot-test.vivo.com.cn"
 LOCAL_DISCOVERY_SERVICE_NAME = "vivohomebridge"
 VIVO_HA_CONFIG_DATA_DEVICES_KEY = "config_devices"
 VIVO_BRIDGE_DEVICE_NAME_CONFIG_KEY = "device_name"
@@ -21,6 +22,7 @@ VIVO_DEVICE_NAME_FRIENDLY_KEY = "friendly_name"
 VIVO_BRIDGE_MAC_CONFIG_KEY = "mac"
 VIVO_BRIDGE_HOST_CONFIG_KEY = "host"
 VIVO_BRIDGE_PORT_CONFIG_KEY = "port"
+VIVO_BRIDGE_HOST_LIST_KEY = "host_list"
 VIVO_BRIDGE_USER_CODE_CONFIG_KEY = "user_code"
 VIVO_BRIDGE_TMP_BIND_CODE_KEY = "tmp_bind_code"
 VIVO_TIMEOUT_EXPIRED_TS = "timeout_expired_ts"
@@ -40,6 +42,7 @@ EVENT_VHOME_DEV_SET_STATUS = "vhome_dev_set_status"
 EVENT_VHOME_DEV_REMOVE_BRIDGE = "vhome_dev_remove_bridge"
 EVEVT_VHOME_BRIDGE_ONLINE = "vhome_dev_online_bridge"
 EVENT_VHOME_RECONNECT = "vhome_reconnect"
+EVENT_VHOME_HOST_LIST_GET = "vhome_host_list_get"
 
 VIVO_HA_CONF_BIND_CODE = "bindCode"
 VIVO_HA_CONF_DEVICE_TYPE = "deviceType"

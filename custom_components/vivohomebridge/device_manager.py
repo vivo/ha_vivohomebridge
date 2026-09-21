@@ -10,6 +10,7 @@ from dataclasses import dataclass
 from typing import Any, Optional, Callable, Dict
 import asyncio
 import time
+import random
 from enum import Enum
 from homeassistant.loader import async_get_integration
 from homeassistant.config_entries import ConfigEntry
@@ -44,10 +45,9 @@ from homeassistant.helpers.event import (
 from .connect_manager import ReconnectManager
 from .const import (
     VIVO_BRIDGE_DEVICE_NAME_CONFIG_KEY,
+    VIVO_BRIDGE_HOST_LIST_KEY,
     VIVO_BRIDGE_MAC_CONFIG_KEY,
     VIVO_HA_CONFIG_DATA_DEVICES_KEY,
-    VIVO_BRIDGE_HOST_CONFIG_KEY,
-    VIVO_BRIDGE_PORT_CONFIG_KEY,
     VIVO_BRIDGE_USER_CODE_CONFIG_KEY,
     EVENT_VHOME_DEV_SET_STATUS,
     EVENT_VHOME_DEV_REMOVE_BRIDGE,
@@ -63,6 +63,7 @@ from .const import (
     EVEVT_VHOME_BRIDGE_ONLINE,
     GLOB_NAME,
     EVENT_VHOME_RECONNECT,
+    EVENT_VHOME_HOST_LIST_GET,
     VIVO_HA_BRIDGE_VERSION,
     VIVO_BRIDGE_DEVICE_ID_CLOUD_KEY,
     EVENT_VHOME_DEV_DEL,
@@ -95,8 +96,7 @@ _TAG = "device_manager"
 class VBridgeDevice:
     name: str
     mac: str
-    host: str
-    port: int
+    host_list: list[str]
     user_code: str
 
 
@@ -126,6 +126,8 @@ class DeviceManager:
     _cancel_listen_bridge_remove: Optional[CALLBACK_TYPE]
     _cancel_listen_bridge_online: Optional[CALLBACK_TYPE]
     _cancel_listen_reconnect: Optional[CALLBACK_TYPE]
+    _cancel_listen_host_list: Optional[CALLBACK_TYPE]
+    _host_get_task: Optional[asyncio.Task] = None
     _cancel_ha_state_changed_listener_dict: Dict[str, Optional[Callable[[], None]]]
     _cancel_listen_entity_registry_updated: Optional[CALLBACK_TYPE]
     _cancel_listen_device_registry_updated_dict: Dict[str, Optional[Callable[[], None]]]
@@ -162,6 +164,8 @@ class DeviceManager:
         self._cancel_listen_bridge_remove = None
         self._cancel_listen_bridge_online = None
         self._cancel_listen_reconnect = None
+        self._cancel_listen_host_list = None
+        self._host_get_task = None
         self._cancel_listen_entity_registry_updated = None
         self._cancel_listen_delete_device = None
         self._cancel_listen_device_registry_updated_dict = {}
@@ -184,6 +188,7 @@ class DeviceManager:
         self._integration_enable = True
         self._registered_device_mac_list = []
         self._bridge_entity = bridge_entity
+        self._reconnector.hass = bridge_entity.hass
         self._register_events_listener(bridge_entity.hass)
         VLog.info(_TAG, f"[set_bridge]：bridge has been set")
 
@@ -257,23 +262,22 @@ class DeviceManager:
                 hass, bridge_device.name, bridge_device.mac, entity_id
             )
             self.get_local_server().config_dn(bridge_device.name)
-            if (
-                self.get_bridge_entity().get_device_enable()
-                and bridge_device.host is not None
-                and len(bridge_device.host) > 0
-                and bridge_device.port is not None
-                and len(bridge_device.port) > 0
-            ):
+
+            if( self.get_bridge_entity().get_device_enable() ):
                 self.get_local_server().config_flag(1)
-                await self.async_connect(
-                    bridge_device.host,
-                    int(bridge_device.port),
-                    bridge_device.name,
-                    bridge_device.user_code,
-                    "setup",
-                )
+                if ( bridge_device.host_list is not None and len(bridge_device.host_list) >0 ):
+                    # 有host_list
+                    await self.async_connect(
+                        bridge_device.host_list,
+                        bridge_device.name,
+                        bridge_device.user_code,
+                        "setup",
+                    )
+                else:
+                    # 老配置无 host_list，后台拉取兜底，不阻塞 setup
+                    self.start_access_host_get_task("setup")
             else:
-                VLog.info(_TAG, f"[async_dm_service_start] bridge is disable")
+                VLog.warning(_TAG, f"[async_dm_service_start] bridge is disable")
         else:
             await self.get_vhome().network_shakehand_task_start()
 
@@ -286,11 +290,74 @@ class DeviceManager:
         VLog.info(_TAG, f"[async_dm_service_start] done")
 
     async def async_connect(
-        self, host: str, port: int, dn: str, user_code: str, reason: str
-    ) -> None:
+            self,host_list: list[str], dn: str, user_code: str, reason: str
+    )->None:
+        # host_list:["AAA.AAA.AAA.AAAA:xxxx", "BBB.BBB.BBB.BBB:xxxx"]
         if self._reconnector.is_reconnect_task_active():
             await self._reconnector.stop_reconnect(reason)
+
+        self._reconnector.host_list = host_list
+        # 取第一个 host:port 用于首次连接，不修改入参 host_list
+        first = host_list[0].rsplit(":", 1)
+        host = first[0]
+        port = int(first[1])
         await self._reconnector.async_connect(host, port, dn, user_code, reason)
+
+    def start_access_host_get_task(self, reason: str) -> None:
+        """去重启动 host_list 拉取 task，已有活跃 task 时跳过"""
+        if self._bridge_entity is None:
+            VLog.warning(_TAG, f"[start_access_host_get_task] bridge not ready, skip ({reason})")
+            return
+        if self._host_get_task is not None and not self._host_get_task.done():
+            VLog.info(_TAG, f"[start_access_host_get_task] task already running, skip ({reason})")
+            return
+        self._host_get_task = self._bridge_entity.hass.async_create_task(
+            self.async_access_host_get_task(self.get_bridge_device_name())
+        )
+
+    async def async_access_host_get_task(self, dn: str) -> None:
+        """后台拉取 host_list 并重连。
+
+        设计为后台 task 运行，不阻塞调用方。无限重试直到拿到 host_list：
+        失败后没有其他机制重新触发拉取，必须一直重试直到成功。
+        """
+        while not (self._bridge_entity is None):
+            access_host_result = await self._vhome.async_access_host_get(dn)
+            VLog.info(_TAG, f"access_host_result:{access_host_result}")
+            if access_host_result is None or len(access_host_result) == 0:
+                VLog.info(
+                    _TAG, f"[async_access_host_get_task] error access_host_result no data"
+                )
+                await asyncio.sleep(10)
+                continue
+
+            acccess_result_code = access_host_result.get("code", None)
+            if acccess_result_code == 10000:
+                host_list = access_host_result.get("data", {}).get("ip") or []
+                if len(host_list) == 0:
+                    VLog.warning(
+                        _TAG,
+                        f"[async_access_host_get_task] code 10000 but ip list empty, retry",
+                    )
+                    await asyncio.sleep(10)
+                    continue
+                config_data = dict(self._bridge_entity.config_entry.data)
+                config_data[VIVO_BRIDGE_HOST_LIST_KEY] = host_list
+                self._bridge_entity.hass.config_entries.async_update_entry(
+                    self._bridge_entity.config_entry, data=config_data
+                )
+                user_code = config_data.get(VIVO_BRIDGE_USER_CODE_CONFIG_KEY, None)
+                device_name = config_data.get(VIVO_BRIDGE_DEVICE_NAME_CONFIG_KEY, None)
+                await self.async_connect(
+                    host_list,
+                    device_name,
+                    user_code,
+                    "access_host",
+                )
+                break
+            else:
+                await asyncio.sleep(random.randint(10, 60))
+
 
     async def async_sync_sub_devices(
         self, config_entry: ConfigEntry, reason: str
@@ -321,7 +388,7 @@ class DeviceManager:
             )
             return
 
-        # VLog.info(_TAG, f"[async_data_report] target_id {target_id},props:{props}")
+        VLog.info(_TAG, f"[async_data_report] target_id {target_id},props:{props}")
         bridge_name = self._bridge_entity.config_entry.data.get(
             VIVO_BRIDGE_DEVICE_NAME_CONFIG_KEY
         )
@@ -330,14 +397,6 @@ class DeviceManager:
         else:
             payload = [{"subId": target_id, "ver": 0, "props": props}]
 
-        #json格式打印payload
-        try:
-            json_string = json.dumps(payload, default=str)
-            VLog.debug(_TAG, f"[async_data_report] payload: {json_string}")
-        except Exception as e:
-            VLog.warning(_TAG, f"<async_data_report json error: {e}>")
-            
-        
         upload_result = await self._vhome.async_data_upload(bridge_name, payload)
         if upload_result != 0:
             VLog.info(
@@ -450,15 +509,12 @@ class DeviceManager:
             bind_result_code = bind_result_dict["code"]
             if bind_result_code == 10000:
                 device_name = bind_result_dict["data"][VIVO_DEVICE_NAME_CONFIG_KEY]
-                ip = bind_result_dict["data"]["ip"][0].split(":")
-                host = ip[0]
-                port = ip[1]
+                host_list = bind_result_dict["data"]["ip"]
                 cp_data = {
                     VIVO_BRIDGE_DEVICE_NAME_CONFIG_KEY: device_name,
-                    VIVO_BRIDGE_HOST_CONFIG_KEY: host,
-                    VIVO_BRIDGE_PORT_CONFIG_KEY: port,
-                    VIVO_BRIDGE_USER_CODE_CONFIG_KEY: bind_code,
                     VIVO_BRIDGE_MAC_CONFIG_KEY: mac,
+                    VIVO_BRIDGE_HOST_LIST_KEY : host_list,
+                    VIVO_BRIDGE_USER_CODE_CONFIG_KEY: bind_code,
                 }
                 self._bridge_entity.hass.config_entries.async_update_entry(
                     self._bridge_entity.config_entry, data=cp_data
@@ -609,10 +665,7 @@ class DeviceManager:
             ),
             self._bridge_entity.config_entry.data.get(VIVO_BRIDGE_MAC_CONFIG_KEY, None),
             self._bridge_entity.config_entry.data.get(
-                VIVO_BRIDGE_HOST_CONFIG_KEY, None
-            ),
-            self._bridge_entity.config_entry.data.get(
-                VIVO_BRIDGE_PORT_CONFIG_KEY, None
+                VIVO_BRIDGE_HOST_LIST_KEY, None
             ),
             self._bridge_entity.config_entry.data.get(
                 VIVO_BRIDGE_USER_CODE_CONFIG_KEY, None
@@ -676,6 +729,9 @@ class DeviceManager:
         # reconnect event
         self._cancel_listen_reconnect = hass.bus.async_listen(
             EVENT_VHOME_RECONNECT, self._async_handle_reconnect_event
+        )
+        self._cancel_listen_host_list = hass.bus.async_listen(
+            EVENT_VHOME_HOST_LIST_GET, self._async_handle_host_list_event
         )
 
     async def _un_register_listener(self):
@@ -869,25 +925,28 @@ class DeviceManager:
                     return
                 if self._integration_enable:
                     bridge_device = DeviceManager.instance().get_bridge_device()
-                    event_data = {
-                        VIVO_BRIDGE_HOST_CONFIG_KEY: bridge_device.host,
-                        VIVO_BRIDGE_PORT_CONFIG_KEY: bridge_device.port,
-                        VIVO_BRIDGE_DEVICE_NAME_CONFIG_KEY: bridge_device.name,
-                        VIVO_BRIDGE_USER_CODE_CONFIG_KEY: bridge_device.user_code,
-                        "reason": "offline",
-                    }
                     if (
-                        bridge_device.host is None
-                        or bridge_device.port is None
-                        or bridge_device.name is None
+                        bridge_device.name is None
                         or bridge_device.user_code is None
                     ):
                         VLog.debug(_TAG, "bridge_device data is not useful")
                         return
-
-                    self.get_bridge_entity().hass.bus.fire(
-                        EVENT_VHOME_RECONNECT, event_data
-                    )
+                    if bridge_device.host_list:
+                        # 有缓存 host_list，直接走重连（失败会自动进重连循环轮询）
+                        event_data = {
+                            VIVO_BRIDGE_HOST_LIST_KEY: bridge_device.host_list,
+                            VIVO_BRIDGE_DEVICE_NAME_CONFIG_KEY: bridge_device.name,
+                            VIVO_BRIDGE_USER_CODE_CONFIG_KEY: bridge_device.user_code,
+                            "reason": "offline",
+                        }
+                        self.get_bridge_entity().hass.bus.fire(
+                            EVENT_VHOME_RECONNECT, event_data
+                        )
+                    else:
+                        # 老配置条目没有 host_list，触发云端拉取兜底
+                        self.get_bridge_entity().hass.bus.fire(
+                            EVENT_VHOME_HOST_LIST_GET, {}
+                        )
                 else:
                     VLog.info(
                         _TAG,
@@ -1631,13 +1690,16 @@ class DeviceManager:
                 if device_availability:
                     self._bridge_entity.set_device_enable(True)
                     bridge_device = DeviceManager.instance().get_bridge_device()
-                    await DeviceManager.instance().async_connect(
-                        bridge_device.host,
-                        int(bridge_device.port),
-                        bridge_device.name,
-                        bridge_device.user_code,
-                        "bridge_enable",
-                    )
+                    if bridge_device.host_list:
+                        await DeviceManager.instance().async_connect(
+                            bridge_device.host_list,
+                            bridge_device.name,
+                            bridge_device.user_code,
+                            "bridge_enable",
+                        )
+                    else:
+                        # 老配置无 host_list，后台拉取兜底
+                        self.start_access_host_get_task("bridge_enable")
                 else:
                     self._bridge_entity.set_device_enable(False)
                     if (
@@ -1772,8 +1834,7 @@ class DeviceManager:
         VLog.info(_TAG, "_async_handle_state_change_event")
         bridge_device = DeviceManager.instance().get_bridge_device()
         if (
-            bridge_device.host is None
-            or bridge_device.port is None
+            not bridge_device.host_list
             or bridge_device.name is None
             or bridge_device.user_code is None
         ):
@@ -1857,14 +1918,27 @@ class DeviceManager:
 
     async def _async_handle_reconnect_event(self, event) -> None:
         VLog.info(_TAG, f"[_async_handle_reconnect_event] event {event}")
-        host = event.data.get(VIVO_BRIDGE_HOST_CONFIG_KEY)
-        port = event.data.get(VIVO_BRIDGE_PORT_CONFIG_KEY)
+        # C 侧每次连接失败都会上报 state:1，若重连循环已在运行，
+        # 这个事件只是当前尝试失败的结果，不是新的掉线，跳过避免反复
+        # 取消重建循环（否则永远卡在 host_list[0]，轮询/切换逻辑跑不到）
+        if self._reconnector.is_reconnect_task_active():
+            VLog.info(_TAG, f"[_async_handle_reconnect_event] reconnect already active, skip")
+            return
+        host_list = event.data.get(VIVO_BRIDGE_HOST_LIST_KEY)
         device_name = event.data.get(VIVO_BRIDGE_DEVICE_NAME_CONFIG_KEY)
         user_code = event.data.get(VIVO_BRIDGE_USER_CODE_CONFIG_KEY)
         reason = event.data.get("reason")
-        self._reconnector.start_reconnect(
-            host, int(port), device_name, user_code, reason
-        )
+        if not host_list:
+            # 事件里没带 host_list，触发云端拉取兜底
+            self.start_access_host_get_task(reason or "reconnect_event")
+            return
+        await self.async_connect(host_list, device_name, user_code, reason)
+
+    @callback
+    def _async_handle_host_list_event(self, event) -> None:
+        VLog.warning(_TAG, f"_async_handle_host_list_event {event}")
+        self.start_access_host_get_task("host_list_event")
+
 
     async def _async_set_config_devices(self, reason: str):
         if self._bridge_entity is None:
