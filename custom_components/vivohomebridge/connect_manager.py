@@ -13,6 +13,24 @@ from .v_utils.vlog import VLog
 _TAG = "ReconnectManager"
 
 
+def parse_host_port(entry: str) -> tuple[str | None, int | None]:
+    """解析 "ip:port" 字符串，格式非法时返回 (None, None)。
+
+    用 rsplit(":", 1) 保留 IPv6 字面量的方括号(如 "[::1]:8080")；
+    端口非数字同样视为非法。调用方不应再用 f"{host}:{port}" 回拼去
+    匹配原始列表项——端口前导零("08080" -> 8080)会导致匹配失败。
+    """
+    if not entry or not isinstance(entry, str):
+        return None, None
+    parts = entry.rsplit(":", 1)
+    if len(parts) != 2:
+        return None, None
+    try:
+        return parts[0], int(parts[1])
+    except ValueError:
+        return None, None
+
+
 def singleton(cls):
     instances = {}
 
@@ -57,11 +75,14 @@ class ReconnectManager:
             VLog.warning(_TAG, f"[start_reconnect]:reconnect task already running when {reason}")
 
     async def _reconnect_loop(self, host, port, dn, user_code, reason) -> None:
-        _host = host
-        _port = port
-        _host_list = self.host_list
+        # 用显式索引轮询，不再用 f"{host}:{port}" 回拼去匹配列表项：
+        # 端口带前导零("08080"->8080)会让字符串匹配失败，idx 退化为 -1，
+        # 导致每轮都回到 host_list[0]，多接入点轮询彻底失效。
+        # 每轮从 self.host_list 现取，云端更新列表后无需重启循环即可感知。
         _retry_count = 0          # 当前 host 已重试次数
         _host_tried_count = 0     # 已尝试过的 host 数（切换时累加）
+        _idx = self._locate_start_index(host, port)
+
         while not self._stop_event.is_set():
             try:
                 VLog.info(_TAG, f"[reconnect_loop][{reason}] reconnect after 5 second")
@@ -70,36 +91,68 @@ class ReconnectManager:
                 VLog.info(_TAG, f"[reconnect_loop] cancel when {reason}:{err}")
                 break
             try:
-                VLog.info(_TAG, f"[reconnect_loop][{reason}] {_host}:{_port} reconnecting... (retry {_retry_count}/3)")
+                # 每轮现取列表，长度可能因云端更新而变化
+                host_list = self.host_list
+                if not host_list:
+                    VLog.warning(_TAG, f"[reconnect_loop][{reason}] host_list empty, wait and retry")
+                    await asyncio.sleep(10)
+                    continue
+
+                _idx %= len(host_list)
+                _host, _port = parse_host_port(host_list[_idx])
+                if _host is None:
+                    # 单条格式非法：跳过该项，不让整个循环退出
+                    VLog.error(_TAG, f"[reconnect_loop][{reason}] invalid entry {host_list[_idx]!r}, skip")
+                    _idx += 1
+                    _host_tried_count += 1
+                    if _host_tried_count >= len(host_list):
+                        _host_tried_count = 0
+                        self._fire_host_list_get(reason)
+                    continue
+
+                VLog.info(_TAG, f"[reconnect_loop][{reason}] {_host}:{_port} reconnecting... (retry {_retry_count}/3, idx {_idx}/{len(host_list)})")
                 connect_result = await self._vhome.async_connect(_host, _port, dn, user_code)
                 if connect_result == 0:
                     VLog.info(_TAG, f"[reconnect_loop][{reason}] reconnected")
                     await self.stop_reconnect("reconnected")
                     break
-                else:
-                    # 同一个 host 重试 3 次都失败，切换到 host_list 下一个
-                    _retry_count += 1
-                    if _retry_count < 3:
-                        VLog.info(_TAG, f"[reconnect_loop][{reason}] {_host}:{_port} failed, retry count {_retry_count}/3")
-                        continue
-                    # 已重试 3 次，切换到下一个 host
-                    _retry_count = 0
-                    if _host_list and len(_host_list) > 0:
-                        current = f"{_host}:{_port}"
-                        idx = _host_list.index(current) if current in _host_list else -1
-                        next_host_port = _host_list[(idx + 1) % len(_host_list)]
-                        _host, port_str = next_host_port.rsplit(":", 1)
-                        _port = int(port_str)
-                        _host_tried_count += 1
-                        VLog.info(_TAG, f"[reconnect_loop][{reason}] switch to next host {_host}:{_port} (host tried {_host_tried_count}/{len(_host_list)})")
-                        # host_list 全部尝试完都失败，触发重新拉取 host_list，不 break 继续循环
-                        if _host_tried_count >= len(_host_list):
-                            _host_tried_count = 0
-                            VLog.info(_TAG, f"[reconnect_loop][{reason}] all {len(_host_list)} hosts tried, fire {EVENT_VHOME_HOST_LIST_GET}")
-                            if self.hass is not None:
-                                self.hass.bus.fire(EVENT_VHOME_HOST_LIST_GET, {})
+
+                # 同一个 host 重试 3 次都失败，切换到 host_list 下一个
+                _retry_count += 1
+                if _retry_count < 3:
+                    VLog.info(_TAG, f"[reconnect_loop][{reason}] {_host}:{_port} failed, retry count {_retry_count}/3")
+                    continue
+
+                _retry_count = 0
+                _idx += 1
+                _host_tried_count += 1
+                VLog.info(_TAG, f"[reconnect_loop][{reason}] switch to next idx {_idx % len(host_list)} (host tried {_host_tried_count}/{len(host_list)})")
+                # host_list 全部尝试完都失败，触发重新拉取，不 break 继续轮询
+                if _host_tried_count >= len(host_list):
+                    _host_tried_count = 0
+                    self._fire_host_list_get(reason)
             except Exception as e:
+                # 注意: 不捕获 asyncio.CancelledError(它继承 BaseException)，
+                # 取消信号必须向上传播，否则 task 无法被正确取消
                 VLog.info(_TAG, f"[reconnect_loop][{reason}] reconnect failed: {e}")
+
+    def _locate_start_index(self, host: str, port: int) -> int:
+        """定位起始索引：按解析后的 (host, port) 元组比对，而非原始字符串。
+
+        端口前导零在解析后归一(08080 -> 8080)，因此入参与列表项能正确匹配；
+        找不到时返回 0，从列表首项开始轮询。
+        """
+        for i, entry in enumerate(self.host_list or []):
+            _h, _p = parse_host_port(entry)
+            if _h == host and _p == port:
+                return i
+        return 0
+
+    def _fire_host_list_get(self, reason: str) -> None:
+        """所有 host 都试过仍失败，触发云端重新拉取 host_list"""
+        VLog.info(_TAG, f"[reconnect_loop][{reason}] all hosts tried, fire {EVENT_VHOME_HOST_LIST_GET}")
+        if self.hass is not None:
+            self.hass.bus.fire(EVENT_VHOME_HOST_LIST_GET, {})
 
     async def stop_reconnect(self, reason: str):
         self._stop_event.set()

@@ -42,7 +42,7 @@ from homeassistant.helpers.event import (
     async_track_state_change_event,
     async_track_device_registry_updated_event,
 )
-from .connect_manager import ReconnectManager
+from .connect_manager import ReconnectManager, parse_host_port
 from .const import (
     VIVO_BRIDGE_DEVICE_NAME_CONFIG_KEY,
     VIVO_BRIDGE_HOST_LIST_KEY,
@@ -293,14 +293,25 @@ class DeviceManager:
             self,host_list: list[str], dn: str, user_code: str, reason: str
     )->None:
         # host_list:["AAA.AAA.AAA.AAAA:xxxx", "BBB.BBB.BBB.BBB:xxxx"]
+        # 防御性校验: 现有调用点都已判空, 但本方法是公共入口,
+        # 避免未来新增调用方遗漏检查时直接崩溃
+        if not host_list:
+            VLog.warning(_TAG, f"[async_connect] host_list is empty, skip ({reason})")
+            return
+
+        # 取第一个 host:port 用于首次连接，不修改入参 host_list
+        host, port = parse_host_port(host_list[0])
+        if host is None:
+            VLog.error(
+                _TAG,
+                f"[async_connect] invalid host format: {host_list[0]}, skip ({reason})",
+            )
+            return
+
         if self._reconnector.is_reconnect_task_active():
             await self._reconnector.stop_reconnect(reason)
 
         self._reconnector.host_list = host_list
-        # 取第一个 host:port 用于首次连接，不修改入参 host_list
-        first = host_list[0].rsplit(":", 1)
-        host = first[0]
-        port = int(first[1])
         await self._reconnector.async_connect(host, port, dn, user_code, reason)
 
     def start_access_host_get_task(self, reason: str) -> None:
