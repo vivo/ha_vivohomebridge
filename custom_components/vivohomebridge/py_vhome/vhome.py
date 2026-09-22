@@ -13,6 +13,7 @@ import shlex
 import subprocess
 import sys
 import threading
+import queue
 import json
 from ctypes import c_char_p, c_void_p, c_int, c_char, c_int, POINTER
 from pathlib import Path
@@ -22,7 +23,8 @@ import logging
 _LOGGER = logging.getLogger("py_vhome")
 system = platform.system()
 machine = platform.machine()
-LIBVERSION = "1.1.1"
+msg_queue = queue.Queue()
+LIBVERSION = "1.1.2"
 """
 检测机器架构
 
@@ -157,6 +159,9 @@ vhome_lib.vhome_get_bind_code_by_mac.argtypes = [c_char_p]
 """char* vhome_bind( char* bcode, char* mac )"""
 vhome_lib.vhome_bind.restype = POINTER(c_char)
 vhome_lib.vhome_bind.argtypes = [c_char_p, c_char_p, c_char_p]
+"""char* vhome_access_host_get( char* dn )"""
+vhome_lib.vhome_access_host_get.restype = POINTER(c_char)
+vhome_lib.vhome_access_host_get.argtypes = [c_char_p]
 """char* vhome_sub_devices_register( char* bcode,char* dn,char* mac,char* sub_devices )"""
 vhome_lib.vhome_sub_devices_register.restype = POINTER(c_char)
 vhome_lib.vhome_sub_devices_register.argtypes = [c_char_p, c_char_p, c_char_p, c_char_p]
@@ -169,9 +174,6 @@ vhome_lib.vhome_connect.argtypes = [c_char_p, c_int, c_char_p, c_char_p]
 """int vhome_disconnect( void )"""
 vhome_lib.vhome_disconnect.restype = ctypes.c_int
 vhome_lib.vhome_disconnect.argtypes = []
-"""char* data_to_python(void)"""
-vhome_lib.data_to_python.restype = POINTER(c_char)
-vhome_lib.data_to_python.argtypes = []
 """char* vhome_so_version(void)"""
 vhome_lib.vhome_so_version.restype = POINTER(c_char)
 vhome_lib.vhome_so_version.argtypes = []
@@ -191,6 +193,11 @@ vhome_lib.vhome_send_bind_code_to_app.argtypes = [c_char_p]
 """int get_local_net_target_port(void);"""
 vhome_lib.get_local_net_target_port.restype = ctypes.c_int
 vhome_lib.get_local_net_target_port.argtypes = []
+
+"""void vhome_register_data_callback(void (*cb)(const char* data));"""
+DATA_CALLBACK_TYPE = ctypes.CFUNCTYPE(None, ctypes.c_char_p)
+vhome_lib.vhome_register_data_callback.restype = None
+vhome_lib.vhome_register_data_callback.argtypes = [DATA_CALLBACK_TYPE]
 
 
 class VHome:
@@ -227,6 +234,14 @@ class VHome:
         )
         vhome_lib.vhome_init(url.encode("utf-8"))
         self.start_data_listener()
+
+        # 注册 C->Python 数据回调。self._c_callback 必须保存为实例属性，
+        # 否则 CFUNCTYPE 对象被 GC 后 C 侧会调用已失效的函数指针
+        def _on_c_data_callback(data_ptr):
+            msg_queue.put(data_ptr)
+
+        self._c_callback = DATA_CALLBACK_TYPE(_on_c_data_callback)
+        vhome_lib.vhome_register_data_callback(self._c_callback)
 
     def start_data_listener(self):
         thread = threading.Thread(target=self._data_from_c_to_python)
@@ -276,25 +291,45 @@ class VHome:
         _LOGGER.warning(f"[WARN] 未注册的回调被触发，参数: {state}")
 
     def _data_from_c_to_python(self):
-        """获取从C传过来的数据"""
+        """消费线程: 从队列取出 C 侧回调投递的数据并分发"""
         _LOGGER.info("开始监听C传过来的数据:_data_from_c_to_python")
         while True:
-            result = vhome_lib.data_to_python()
-            if result:
-                result_str = ctypes.cast(result, c_char_p).value.decode("utf-8")
-                vhome_lib.vhome_memory_free(result)
-                # _LOGGER.info(f"data from so: {result_str}")
-                result_dict = json.loads(result_str)
-                if result_dict["type"] == 0:
-                    del result_dict["type"]
-                    self._on_state(result_dict)
-                elif result_dict["type"] == 1:
-                    del result_dict["type"]
-                    self._on_data(result_dict)
-                elif result_dict["type"] == 2:
-                    # 配网数据
-                    _LOGGER.info(f"client sharkhand success : {result_dict}")
-                    self._on_local_event(result_dict)
+            try:
+                # 阻塞等待 C 侧回调 put 进来的 bytes
+                result = msg_queue.get()
+            except Exception as e:
+                _LOGGER.error(f"msg_queue get error: {e}")
+                continue
+            if not result:
+                continue
+            try:
+                self._dispatch_c_data(result)
+            except Exception:
+                # 任何一条消息的分发异常都不能让消费线程退出，否则后续
+                # 所有 C->Python 数据都会被静默丢弃
+                _LOGGER.exception("dispatch c data failed, skip this message")
+
+    def _dispatch_c_data(self, result):
+        """解析并按 type 分发。result 是 ctypes 从 c_char_p 拷贝出的 bytes"""
+        result_str = result.decode("utf-8")
+        _LOGGER.info(f"data from c-so: {result_str}")
+        try:
+            result_dict = json.loads(result_str)
+        except Exception as e:
+            _LOGGER.error(f"json parse error: {e}")
+            return
+        msg_type = result_dict.get("type")
+        if msg_type == 0:
+            del result_dict["type"]
+            self._on_state(result_dict)
+        elif msg_type == 1:
+            del result_dict["type"]
+            self._on_data(result_dict)
+        elif msg_type == 2:
+            # 配网数据。_on_local_event 是同步函数，内部自行通过
+            # hass.loop.call_soon_threadsafe 调度到事件循环，这里直接调用
+            _LOGGER.info(f"client sharkhand success : {result_dict}")
+            self._on_local_event(result_dict)
 
     def _get_bcode(self, mac: str) -> dict:
         """获取绑定码"""
@@ -401,6 +436,23 @@ class VHome:
 
         """
         return self._bind(bcode, mac, en)
+
+    async def async_access_host_get(self, dn: str) -> dict:
+        '''获取接入点列表
+        Args:
+            dn: device_name
+            
+        Result:
+            {'code': 10000, 'data': {'ntp': '1789907882855', 'ip': ['AAA.AAA.AAA.AAA:XXXXX', 'BBB.BBB.BBB.BBB:XXXXX']}}
+        '''
+        result_dict = {}
+        result = vhome_lib.vhome_access_host_get(dn.encode("utf-8"))
+        if result:
+            result_str = ctypes.cast(result, c_char_p).value.decode("utf-8")
+            _LOGGER.info(f"access host get result : {result_str}")
+            vhome_lib.vhome_memory_free(result)
+            result_dict = json.loads(result_str)
+        return result_dict
 
     async def async_send_bind_code_to_app(self, bcode: dict) -> int:
         return self._send_bind_code_to_app(bcode)
