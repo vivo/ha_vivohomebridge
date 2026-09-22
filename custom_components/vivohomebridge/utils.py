@@ -6,7 +6,7 @@
 """
 
 from homeassistant.const import CONF_UNIT_OF_MEASUREMENT
-from homeassistant.helpers import entity_registry as er
+from homeassistant.helpers import entity_registry as er, device_registry as dr
 from .const import VIVO_HA_KEY_WORLD_DEV_LOGIC_MAC, VIVO_DEVICE_NAME_CONFIG_KEY, \
     VIVO_DEVICE_ENTITY_ID_KEY, VIVO_HA_KEY_WORLD_DEV_ENTRY_ID, VIVO_DEVICE_NAME_FRIENDLY_KEY,VIVO_DEVICE_ID_KEY
 
@@ -124,3 +124,24 @@ class Utils:
                         return line.split(":")[1].strip()
         except Exception as e:
             return "Unknown"
+
+    @staticmethod
+    def get_device_of_entity(hass, entity_id: str):
+        entity_registry = er.async_get(hass)
+        entity_obj = entity_registry.async_get(entity_id)
+        if entity_obj is None:
+            return None
+        if entity_obj.device_id is None:
+            class MockVirtualDevice:
+                sw_version = "HA-Virtual-1.0"
+                hw_version = "Virtual"
+                manufacturer = "HomeAssistant"
+                serial_number = "N/A"
+                model = "Virtual Entity"
+                name = "Virtual Device"
+                name_by_user = None
+            return MockVirtualDevice()
+        
+        device_registry = dr.async_get(hass)
+        device = device_registry.async_get(entity_obj.device_id)
+        return device
