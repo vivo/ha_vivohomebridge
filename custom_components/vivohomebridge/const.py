@@ -1,4 +1,4 @@
-"""
+﻿"""
 Copyright 2024 vivo Mobile Communication Co., Ltd.
 Licensed under the Apache License, Version 2.0 (the "License");
 
@@ -8,7 +8,7 @@ Licensed under the Apache License, Version 2.0 (the "License");
 from homeassistant.const import Platform
 
 DOMAIN = "vivohomebridge"
-VIVO_HA_BRIDGE_VERSION = "2026.09.21.1789990709"
+VIVO_HA_BRIDGE_VERSION = "2026.09.22.1790076481"
 MANUFACTURER = "Home Assistant"
 GLOB_NAME = "HA中控"
 VHOME_URL = "https://iot.vivo.com.cn"

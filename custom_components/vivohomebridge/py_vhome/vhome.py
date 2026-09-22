@@ -1,10 +1,11 @@
-"""
+﻿"""
  Copyright 2024 vivo Mobile Communication Co., Ltd.
  Licensed under the Apache License, Version 2.0 (the "License");
 
     http://www.apache.org/licenses/LICENSE-2.0
 """
 
+import asyncio
 import ctypes
 import os
 import platform
@@ -15,6 +16,7 @@ import sys
 import threading
 import queue
 import json
+from concurrent.futures import ThreadPoolExecutor
 from ctypes import c_char_p, c_void_p, c_int, c_char, c_int, POINTER
 from pathlib import Path
 from typing import Callable, Optional, Tuple
@@ -23,8 +25,10 @@ import logging
 _LOGGER = logging.getLogger("py_vhome")
 system = platform.system()
 machine = platform.machine()
-msg_queue = queue.Queue()
 LIBVERSION = "1.1.2"
+
+# C 调用专用单工作线程池。
+_c_executor = ThreadPoolExecutor(max_workers=1, thread_name_prefix="vhome_c")
 """
 检测机器架构
 
@@ -219,6 +223,9 @@ class VHome:
          None
         """
         _LOGGER.info(f"VHome work on {system}+{machine}")
+        # C->Python 数据队列。用实例属性而非模块级全局，避免多实例/模块重载
+        # 时 C 回调与消费线程引用到不同队列
+        self._msg_queue = queue.Queue()
         self._on_state = (
             on_state if callable(on_state) else self._default_on_state_callback
         )
@@ -238,7 +245,7 @@ class VHome:
         # 注册 C->Python 数据回调。self._c_callback 必须保存为实例属性，
         # 否则 CFUNCTYPE 对象被 GC 后 C 侧会调用已失效的函数指针
         def _on_c_data_callback(data_ptr):
-            msg_queue.put(data_ptr)
+            self._msg_queue.put(data_ptr)
 
         self._c_callback = DATA_CALLBACK_TYPE(_on_c_data_callback)
         vhome_lib.vhome_register_data_callback(self._c_callback)
@@ -296,7 +303,7 @@ class VHome:
         while True:
             try:
                 # 阻塞等待 C 侧回调 put 进来的 bytes
-                result = msg_queue.get()
+                result = self._msg_queue.get()
             except Exception as e:
                 _LOGGER.error(f"msg_queue get error: {e}")
                 continue
@@ -417,12 +424,21 @@ class VHome:
             return -1
 
 
+    async def _run_c(self, func, *args):
+        """把阻塞的 C 调用投递到专用单 worker 线程池执行。
+
+        所有 async_* 包装都必须经此调用, 不要直接调 self._xxx:
+        直接调会在事件循环线程上阻塞 HA
+        """
+        loop = asyncio.get_running_loop()
+        return await loop.run_in_executor(_c_executor, func, *args)
+
     async def async_get_bcode(self, mac: str) -> dict:
         """获取绑定码
         Args:
             mac: 网卡物理地址(mac)
         """
-        return self._get_bcode(mac)
+        return await self._run_c(self._get_bcode, mac)
 
     async def async_bind(self, bcode: str, mac: str, en: str) -> dict:
         """绑定设备.
@@ -435,35 +451,50 @@ class VHome:
             绑定设备结果
 
         """
-        return self._bind(bcode, mac, en)
+        return await self._run_c(self._bind, bcode, mac, en)
+
+    def _access_host_get_sync(self, dn: str) -> dict:
+        '''同步阻塞实现: 供 executor 调用, 不要在事件循环里直接调。
+
+        C 侧 vhome_access_host_get 走 HTTP 请求, 超时 BIND_RECEIVE_TIME_OUT=10s,
+        整个调用期间会阻塞所在线程。指针的获取与释放在同一线程内完成。
+        '''
+        result_dict = {}
+        result = vhome_lib.vhome_access_host_get(dn.encode("utf-8"))
+        if result:
+            try:
+                result_str = ctypes.cast(result, c_char_p).value.decode("utf-8")
+                _LOGGER.info(f"access host get result : {result_str}")
+                result_dict = json.loads(result_str)
+            except Exception as e:
+                _LOGGER.error(f"access host get parse error: {e}")
+            finally:
+                vhome_lib.vhome_memory_free(result)
+        return result_dict
 
     async def async_access_host_get(self, dn: str) -> dict:
         '''获取接入点列表
         Args:
             dn: device_name
-            
+
         Result:
             {'code': 10000, 'data': {'ntp': '1789907882855', 'ip': ['AAA.AAA.AAA.AAA:XXXXX', 'BBB.BBB.BBB.BBB:XXXXX']}}
+
+        调用方 async_access_host_get_task 是无限重试循环, 每次最长阻塞 10s,
+        必须走 executor 避免卡住 HA 事件循环。
         '''
-        result_dict = {}
-        result = vhome_lib.vhome_access_host_get(dn.encode("utf-8"))
-        if result:
-            result_str = ctypes.cast(result, c_char_p).value.decode("utf-8")
-            _LOGGER.info(f"access host get result : {result_str}")
-            vhome_lib.vhome_memory_free(result)
-            result_dict = json.loads(result_str)
-        return result_dict
+        return await self._run_c(self._access_host_get_sync, dn)
 
     async def async_send_bind_code_to_app(self, bcode: dict) -> int:
-        return self._send_bind_code_to_app(bcode)
+        return await self._run_c(self._send_bind_code_to_app, bcode)
 
     async def async_sub_devices_register(
         self, bcode: str, dn: str, mac: str, sub_devices: list[dict]
     ) -> dict:
         """子设备注册"""
         result_devices = []
-        register_sub_device_result = self._sub_devices_register(
-            bcode, dn, mac, sub_devices
+        register_sub_device_result = await self._run_c(
+            self._sub_devices_register, bcode, dn, mac, sub_devices
         )
         if (
             register_sub_device_result is None
@@ -486,7 +517,7 @@ class VHome:
             }
 
     async def async_data_upload(self, dn: str, data: list[dict]) -> int:
-        return self._data_upload(dn, data)
+        return await self._run_c(self._data_upload, dn, data)
 
     async def async_connect(self, host: str, port: int, dn: str, user_code: str) -> int:
         """
@@ -498,8 +529,11 @@ class VHome:
         Returns:
          0:接口调用成功，最终连接成功需要通过状态回调通知获取:{'state': 1, 'connect_result': 0}
          其他:失败
+
+        注意: C 侧 mbedtls_net_connect 未设超时, 连不可达地址时阻塞可达
+        约 127s(Linux tcp_syn_retries 默认 6), 必须走 executor。
         """
-        return self._connect(host, port, dn, user_code)
+        return await self._run_c(self._connect, host, port, dn, user_code)
 
     async def async_disconnect(self, dn: str) -> int:
         """
@@ -507,7 +541,7 @@ class VHome:
         Args:
          dn (str): 设备的唯一标识符
         """
-        return self._disconnect(dn)
+        return await self._run_c(self._disconnect, dn)
 
     def version(self) -> str:
         c_type_result = vhome_lib.vhome_so_version()
@@ -528,9 +562,12 @@ class VHome:
 
     async def network_shakehand_task_start(self) -> None:
         _LOGGER.warning("Start network_shakehand ... ")
-        self._network_shakehand_task_start()
+        await self._run_c(self._network_shakehand_task_start)
         return
 
     async def network_shakehand_task_stop(self) -> None:
+        # 本身不阻塞(pthread_cancel 不 join), 但操作的 netcfg 全局
+        # (taskHandle/tcpClientFd/net_task_running)与 send_bind_code_to_app
+        # 共享, 走同一 executor 以保持串行
         _LOGGER.warning("Stop network_shakehand ... ")
-        self._network_shakehand_task_stop()
+        await self._run_c(self._network_shakehand_task_stop)
