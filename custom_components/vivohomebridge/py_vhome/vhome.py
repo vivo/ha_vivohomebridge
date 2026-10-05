@@ -111,7 +111,7 @@ def detect_platform() -> Tuple[str, str, Optional[str]]:
         libc = detect_libc()
         return ("linux", arch, libc)
     else:
-        return (sysplat, arch, libc)
+        return (sysplat, arch, None)
 
 def build_library_filename(base: str, os_name: str, arch: str, libc: Optional[str], libVersion: str) -> str:
     if os_name == "windows":

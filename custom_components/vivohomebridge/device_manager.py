@@ -1065,7 +1065,7 @@ class DeviceManager:
                 bind_code: str = None
                 _delay_time: int = 300
                 errors: dict[str, str] = {}
-                description_placeholders: {} = {}
+                description_placeholders: dict[str, Any] = {}
                 mac: str = self.get_bridge_device().mac
 
                 bcode_dict_result = await self._vhome.async_get_bcode(mac)

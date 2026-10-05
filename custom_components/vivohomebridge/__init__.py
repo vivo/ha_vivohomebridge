@@ -76,9 +76,10 @@ async def async_unload_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> 
     hass.config_entries.async_update_entry(config_entry, data=_entry_data)
 
     VLog.info(_TAG, f"[async_unload_entry]{config_entry.data}")
-    DeviceManager.instance().instance().get_local_server().config_flag(2)
-    await DeviceManager.instance().instance().get_local_server().sync_update_txt()
-    await DeviceManager.instance().instance().get_local_server().sync_stop()
-    await DeviceManager.instance().instance().get_vhome().network_shakehand_task_stop()
-    await DeviceManager.instance().uninstall()
+    dm = DeviceManager.instance()
+    dm.get_local_server().config_flag(2)
+    await dm.get_local_server().sync_update_txt()
+    await dm.get_local_server().sync_stop()
+    await dm.get_vhome().network_shakehand_task_stop()
+    await dm.uninstall()
     return True
