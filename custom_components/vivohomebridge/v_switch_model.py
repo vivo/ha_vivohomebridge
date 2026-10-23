@@ -46,7 +46,7 @@ class VSwitchModel:
         ]
 
     def v2h_onoff(self, device_id: str, index: int, on_off: dict, val):
-        """Turn off the climate."""
+        """Turn off the switch."""
         VLog.info(_TAG, f"[v2h_onoff],val:{val}")
         service: str = SERVICE_TURN_ON
         h_attributes: dict = {"entity_id": device_id}
