@@ -54,7 +54,7 @@ class VFanModel:
         ]
 
     def v2h_onoff(self, device_id: str, index: int, on_off: dict, val):
-        """Turn off the climate."""
+        """Turn off the fan."""
         VLog.info(_TAG, f"[v2h_onoff],val:{val}")
         service: str = "turn_on"
         h_attributes: dict = {ATTR_ENTITY_ID: device_id}
