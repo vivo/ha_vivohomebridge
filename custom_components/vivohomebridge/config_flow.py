@@ -67,7 +67,7 @@ class VHomeBridgeConfigFlow(ConfigFlow, domain=DOMAIN):
     ) -> ConfigFlowResult:
         self.hass.data.setdefault(DOMAIN, {})
         errors: dict[str, str] = {}
-        description_placeholders: {} = {}
+        description_placeholders: dict[str, Any] = {}
         if user_input is not None:
             if user_input.get("important_notes", None) is True:
                 self._bridge_mac = f"{await async_get(self.hass)}{int(time.time())}"
